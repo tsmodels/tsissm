@@ -1,0 +1,10 @@
+.travis.yml
+^appveyor\.yml$
+.git
+.DS_Store
+.vscode
+LICENSE
+README.md
+cleanup
+^.*\.Rproj$
+^\.Rproj\.user$
