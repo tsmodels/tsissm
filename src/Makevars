@@ -1,0 +1,14 @@
+
+# Check for the default Apple compiler
+APPLE_COMPILER := $(shell CXX11='$(CXX)' $(CXX11) --version 2>&1 | grep -i -c -E 'apple llvm')
+
+ifeq ($(APPLE_COMPILER),0)
+    TSETS_OPENMP_CXXFLAGS=$(SHLIB_OPENMP_CXXFLAGS)
+else
+    TSETS_OPENMP_CXXFLAGS=
+endif
+
+PKG_CPPFLAGS= $(TSETS_OPENMP_CXXFLAGS)
+PKG_LIBS = $(TSETS_OPENMP_CXXFLAGS) $(LAPACK_LIBS) $(BLAS_LIBS) $(FLIBS)
+
+CXX_STD=CXX11STD
