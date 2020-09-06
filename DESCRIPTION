@@ -10,7 +10,7 @@ Authors@R: c(person("Alexios", "Galanos", role = c("aut", "cre"),
     email="kth.ohr@gmail.com"))
 Maintainer: alexios galanos <alexios@4dscape.com>
 Description: Unobserved Components Model using the Linear Innovation State Space representation.
-SystemRequirements: C++14
+SystemRequirements: C++11
 Depends: R (>= 3.5.0), Rcpp (>= 0.12.9), tsmethods
 LinkingTo: Rcpp (>= 0.12.9), RcppArmadillo
 Imports: methods, tsaux, zoo, xts, data.table, nloptr, Rsolnp, viridis, EnvStats, doSNOW, foreach, parallel
