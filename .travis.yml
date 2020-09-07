@@ -1,0 +1,27 @@
+language: r
+cache: packages
+sudo: required
+warnings_are_errors: false
+
+env:
+  global:
+    - R_BUILD_ARGS="--no-manual"
+    - R_CHECK_ARGS="--no-manual --as-cran"
+
+before_install:
+  - rm -rf tests
+  - |
+    WDIR=${PWD}
+    cd ..
+    R -e "install.packages(c('devtools'), type = 'source')"
+    R -e "devtools::install_github("tsmodels/tsmethods"))"
+    R -e "devtools::install_github("tsmodels/tsaux"))"
+    cd ${WDIR}
+
+after_failure:
+  - ./travis-tool.sh dump_logs
+
+notifications:
+  email:
+    on_success: change
+    on_failure: change
