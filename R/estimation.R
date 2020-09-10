@@ -38,7 +38,7 @@ estimate.tsissm.spec <- function(object, solver = "nlminb", control = list(trace
     object$target$y <- object$transform$transform(object$target$y_orig, f$parmatrix[parameters == "lambda"]$optimal)
     f$spec <- object
     f$opt <- opt
-    f$opt$timing <- difftime(Sys.time(), tic, units = "mins")
+    f$opt$elapsed <- difftime(Sys.time(), tic, units = "mins")
     class(f) <- "tsissm.estimate"
     return(f)
 }
@@ -66,21 +66,12 @@ iss_filter <- function(pars, obj)
                       kappa_ = S[list("kappa")]$values,
                       mdim = mdim, xseed_ = obj$xseed)
     L <- list()
-    if (pars["lambda"] != 1) {
-        L$fitted <- obj$transform$inverse(f$fitted[-1], lambda = pars["lambda"])
-        L$residuals <- obj$target$y_orig - L$fitted
-        L$states <- f$states[-1,,drop = FALSE]
-        L$xseed <- f$xseed
-        L$loglik <- f$loglik
-        L$condition <- f$condition
-    } else {
-        L$fitted <- f$fitted[-1]
-        L$residuals <- f$error[-1]
-        L$states <- f$states[-1,,drop = FALSE]
-        L$xseed <- f$xseed
-        L$loglik <- f$loglik
-        L$condition <- f$condition
-    }
+    L$fitted <- obj$transform$inverse(f$fitted[-1], lambda = pars["lambda"])
+    L$residuals <- obj$target$y_orig - L$fitted
+    L$states <- f$states[-1,,drop = FALSE]
+    L$xseed <- f$xseed
+    L$loglik <- f$loglik
+    L$condition <- f$condition
     L$w <- f$w
     L$g <- f$g
     L$F <- f$F

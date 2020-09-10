@@ -72,6 +72,8 @@ issm_modelspec <- function(y, slope = TRUE, slope_damped = FALSE, seasonal = FAL
     spec$seasonal$seasonal_type <- match.arg(seasonal_type[1], c("trigonometric","regular"))
     spec$xreg$include_xreg <- include_xreg
     spec$xreg$xreg <- xreg
+    
+    if (is.null(lambda)) lambda <- 1
     if (is.na(lambda)) {
         include_lambda <- TRUE
         transform <- box_cox(lambda = lambda, lower = 0, upper = 1.5)

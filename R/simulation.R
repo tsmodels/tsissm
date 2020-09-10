@@ -58,14 +58,11 @@ simulate.tsissm.estimate <- function(object, nsim = 1, seed = NULL, h = NULL, ne
             colnames(newxreg) <- colnames(object$spec$xreg$xreg)
         }
     }
-    if (object$parmatrix[parameters == "lambda"]$optimal != 1) {
-        act <- object$spec$transform$transform(object$spec$target$y_orig, lambda = object$parmatrix[parameters == "lambda"]$optimal)
-        fit <- object$spec$transform$transform(object$model$fitted, lambda = object$parmatrix[parameters == "lambda"]$optimal)
-        res <- act - fit
-        sigma_res <- sd(res)
-    } else {
-        sigma_res <- sd(residuals(object))
-    }
+    act <- object$spec$transform$transform(object$spec$target$y_orig, lambda = object$parmatrix[parameters == "lambda"]$optimal)
+    fit <- object$spec$transform$transform(object$model$fitted, lambda = object$parmatrix[parameters == "lambda"]$optimal)
+    res <- act - fit
+    sigma_res <- sd(res)
+    
     if (bootstrap) {
         act <- object$spec$transform$transform(object$spec$target$y_orig, lambda = object$parmatrix[parameters == "lambda"]$optimal)
         fit <- object$spec$transform$transform(object$model$fitted, lambda = object$parmatrix[parameters == "lambda"]$optimal)
