@@ -363,6 +363,7 @@ ss_ma <- function(slope = TRUE, frequency = 1, type = "trigonometric", K = NULL,
 
 ss_matrices <- function(y, slope = TRUE, damped_slope = FALSE, frequency = 1, type = "trigonometric", K = NULL, ar = 0, ma = 0, include_xreg = FALSE, xreg = NULL)
 {
+    if (is.null(frequency)) frequency <- 1
     M <- ss_level(slope = slope, frequency = frequency, type = type, K = K, ar = ar, ma = ma)
     F0 <- M$f0
     F1 <- M$f1
@@ -463,7 +464,7 @@ ss_matrices <- function(y, slope = TRUE, damped_slope = FALSE, frequency = 1, ty
         Smatrix[k, 2] <- max(Smatrix[1:(k - 1), 3]) + 1
         Smatrix[k, 3] <- max(Smatrix[1:(k - 1), 3]) + 1
     }
-    if (length(frequency[1] > 1)) {
+    if (frequency[1] > 1) {
         for (i in 1:length(frequency)) {
             k <- k + 1
             if (type == "trigonometric") {
@@ -496,7 +497,7 @@ ss_matrices <- function(y, slope = TRUE, damped_slope = FALSE, frequency = 1, ty
     Smatrix[k ,2] <- 1
     Smatrix[k ,3] <- NCOL(xreg)
     D <- c("m" = NROW(F0), "n" = length(y), "s" = ifelse(frequency[1] > 1, ifelse(type == "trigonometric", 1, 2), 0))
-    if (length(frequency[1] > 1)) {
+    if (frequency[1] > 1) {
         seasonal_start <- Smatrix[which(grepl("Seasonal",rownames(Smatrix)))[1],2]
         seasonal_end <- Smatrix[max(which(grepl("Seasonal",rownames(Smatrix)))),3]
     } else {
