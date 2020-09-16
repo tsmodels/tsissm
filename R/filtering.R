@@ -65,7 +65,7 @@ tsfilter.tsissm.estimate <- function(object, y = NULL, newxreg = NULL, ...)
     if (!is.null(newxreg)) {
         object$spec$xreg$xreg <- rbind(object$spec$xreg$xreg, X)
     } else {
-        object$spec$xreg$xreg <- cbind(object$spec$xreg$xreg, matrix(0, ncol = ncol(object$spec$xreg$xreg), nrow = NROW(yneworig)))
+        object$spec$xreg$xreg <- rbind(object$spec$xreg$xreg, matrix(0, ncol = ncol(object$spec$xreg$xreg), nrow = NROW(yneworig)))
     }
     filt <- object$spec$transform$inverse(f$fitted, lambda = as.numeric(pars["lambda"]))
     filt <- filt[-1]

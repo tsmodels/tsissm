@@ -64,12 +64,17 @@ tsbacktest.tsissm.spec <- function(object, start = floor(length(object$target$y_
             xreg_train <- NULL
             xreg_test <- NULL
         }
+        if (object$transform$include_lambda) {
+            lambda <- NA
+        } else {
+            lambda <- object$transform$lambda
+        }
         spec <- issm_modelspec(y_train, slope = object$slope$include_slope, slope_damped = object$slope$include_damped,
                                seasonal = object$seasonal$include_seasonal,
                                seasonal_frequency = object$seasonal$seasonal_frequency,
                                seasonal_type = object$seasonal$seasonal_type,
                                seasonal_harmonics = object$seasonal$seasonal_harmonics,
-                               ar = object$arma$order[1], ma = object$arma$order[2], xreg = xreg_train, lambda = NA, sampling = object$target$sampling)
+                               ar = object$arma$order[1], ma = object$arma$order[2], xreg = xreg_train, lambda = lambda, sampling = object$target$sampling)
         mod <- estimate(spec, solver = solver)
         p <- predict(mod, h = horizon[i], newxreg = xreg_test, forc_dates = index(y_test))
         if (save_output) {
