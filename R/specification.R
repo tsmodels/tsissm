@@ -65,7 +65,7 @@ issm_modelspec <- function(y, slope = TRUE, slope_damped = FALSE, seasonal = FAL
         }
     } else {
         seasonal_harmonics <- NULL
-        seasonal_frequency <- NULL
+        seasonal_frequency <- 1
     }
     spec$seasonal$seasonal_harmonics <- seasonal_harmonics[1:length(seasonal_frequency)]
     spec$seasonal$seasonal_frequency <- seasonal_frequency
