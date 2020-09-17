@@ -74,8 +74,22 @@ tsbacktest.tsissm.spec <- function(object, start = floor(length(object$target$y_
                                seasonal_frequency = object$seasonal$seasonal_frequency,
                                seasonal_type = object$seasonal$seasonal_type,
                                seasonal_harmonics = object$seasonal$seasonal_harmonics,
-                               ar = object$arma$order[1], ma = object$arma$order[2], xreg = xreg_train, lambda = lambda, sampling = object$target$sampling)
-        mod <- estimate(spec, solver = solver)
+                               ar = object$arma$order[1], ma = object$arma$order[2], 
+                               xreg = xreg_train, lambda = lambda, sampling = object$target$sampling)
+        mod <- try(estimate(spec, solver = solver), silent = TRUE)
+        if (inherits(mod, 'try-error') | is.null(mod)) {
+            if (!is.null(quantiles)) {
+                qp <- matrix(NA, ncol = length(quantiles), nrow = horizon[i])
+                colnames(qp) <- paste0("P", round(quantiles*100))
+            }
+            out <- data.table("estimation_date" = rep(seqdates[i], horizon[i]),
+                              "horizon" = 1:horizon[i],
+                              "size" = rep(nrow(y_train), horizon[i]),
+                              "forecast_dates" = as.character(index(y_test)),
+                              "forecast" = rep(as.numeric(NA), horizon[i]), "actual" = as.numeric(y_test))
+            if (!is.null(quantiles)) out <- cbind(out, qp)
+            return(out)
+        }
         p <- predict(mod, h = horizon[i], newxreg = xreg_test, forc_dates = index(y_test))
         if (save_output) {
             saveRDS(mod, file = paste0(save_dir,"/model_", seqdates[i], ".rds"))
@@ -105,13 +119,15 @@ tsbacktest.tsissm.spec <- function(object, start = floor(length(object$target$y_
     if (is.null(data_name)) data_name <- "y"
     actual <- NULL
     forecast <- NULL
-    metrics <- b[,list(variable = data_name, MAPE = mape(actual, forecast), MSLRE = mslre(actual, forecast),
+    z <- copy(b)
+    z <- na.omit(z)
+    metrics <- z[,list(variable = data_name, MAPE = mape(actual, forecast), MSLRE = mslre(actual, forecast),
                        BIAS = bias(actual, forecast),
                        n = .N), by = "horizon"]
     if (!is.null(alpha)) {
         q_names <- matrix(paste0("P", round(quantiles*100)), ncol = 2, byrow = TRUE)
         q <- do.call(cbind, lapply(1:length(alpha), function(i){
-            b[,list(mis = mis(actual, get(q_names[i,1]), get(q_names[i,2]), alpha[i])), by = "horizon"]
+            z[,list(mis = mis(actual, get(q_names[i,1]), get(q_names[i,2]), alpha[i])), by = "horizon"]
         }))
         q <- q[,which(grepl("mis",colnames(q))), with = FALSE]
         colnames(q) <- paste0("MIS[",alpha,"]")

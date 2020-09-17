@@ -21,8 +21,9 @@ estimate.tsissm.spec <- function(object, solver = "nlminb", control = list(trace
     } else if (solver == "optim") {
         if (is.null(control$maxit)) control$maxit <- 5000
         control$parscale <- object$parmatrix[estimate == 1]$scale
-        opt <- optim(par = pars, control = control, method = "Nelder-Mead", fn = loglik_fun, obj = object)
+        opt <- optim(par = pars, control = control, method = "Nelder-Mead", fn = loglik_fun_unc, obj = object)
         pars <- opt$par
+        pars <- transform_pars(pars, object$parmatrix[estimate == 1]$lower, object$parmatrix[estimate == 1]$upper)
     } else if (solver == "solnp") {
         control2 <- list()
         control2$maxit <- 100
@@ -33,6 +34,22 @@ estimate.tsissm.spec <- function(object, solver = "nlminb", control = list(trace
         pars <- opt$pars
     }
     object$xseed <- get("xseed", solver_env)
+    if (is.null(object$xseed)) {
+        if (solver == "optim" | solver == "solnp") {
+            opt <- nlminb(start = pars, control = control, objective = loglik_fun, lower = object$parmatrix[estimate == 1]$lower,
+                          upper = object$parmatrix[estimate == 1]$upper, obj = object)
+            pars <- opt$par
+        } else {
+            control2 <- list()
+            control2$maxit <- 5000
+            control2$parscale <- object$parmatrix[estimate == 1]$scale
+            opt <- optim(par = pars, control = control2, method = "Nelder-Mead", fn = loglik_fun, obj = object)
+            pars <- opt$par
+        }
+        if (is.null(object$xseed)) {
+            stop("\nproblem estimating model...exiting")
+        }
+    }
     f <- iss_filter(pars, obj = object)
     parameters <- NULL
     object$target$y <- object$transform$transform(object$target$y_orig, f$parmatrix[parameters == "lambda"]$optimal)
@@ -125,6 +142,51 @@ loglik_fun <- function(pars, obj)
     return(llh)
 }
 
+loglik_fun_unc <- function(pars, obj)
+{
+    estimate <- NULL
+    pars <- transform_pars(pars, obj$parmatrix[estimate == 1]$lower, obj$parmatrix[estimate == 1]$upper)
+    pp <- NULL
+    pp <<- pars
+    if (any(is.na(pars))) return(Inf)
+    #print(pars)
+    solver_env <- obj$solver_env
+    obj$parmatrix[estimate == 1, "initial"] <- pars
+    pars <- obj$parmatrix$initial
+    names(pars) <- obj$parmatrix$parameters
+    Mnames <- na.omit(obj$S$pars)
+    S <- obj$S
+    S[which(!is.na(pars)),"values"] <- pars[Mnames]
+    ##################################################################
+    parnames <- names(pars)
+    if (sum(obj$arma$order) > 0) {
+        if (arma_conditions(pars, parnames)) {
+            llh <- get("issm_llh", solver_env) + 0.1*(abs(get("issm_llh", solver_env)))
+            return(llh)
+        }
+    }
+    mdim = obj$dims
+    f <- issestimation(f0_ = S[list("F0")]$values,
+                       f1_ = S[list("F1")]$values,
+                       f2_ = S[list("F2")]$values,
+                       w_ = as.numeric(S[list("w")]$values),
+                       g_ = as.numeric(S[list("g")]$values),
+                       y_ = as.numeric(obj$target$y_orig),
+                       lambda_ = as.numeric(pars["lambda"]),
+                       xreg_ = S[list("xreg")]$values,
+                       kappa_ = S[list("kappa")]$values,
+                       mdim = mdim)
+    
+    if (!is.finite(f$loglik) | f$condition == 1 ) {
+        llh <- get("issm_llh", solver_env) + 0.1*(abs(get("issm_llh", solver_env)))
+    } else{
+        llh <- f$loglik
+        assign("issm_llh", llh, envir = solver_env)
+    }
+    assign("xseed", f$xseed, envir = solver_env)
+    return(llh)
+}
+
 arma_conditions <- function(pars, parnames) {
     if (any(grepl("theta",parnames))) {
         ar <- pars[grepl("theta",parnames)]
@@ -148,3 +210,14 @@ arma_conditions <- function(pars, parnames) {
     }
     return(FALSE)
 }
+
+transform_pars <- function(pars, lower, upper, inverse = FALSE)
+{
+    if (!inverse) {
+        ans <- lower + (upper - lower)/(1 + exp(-1 * pars))
+    } else{
+        ans <- -1 * log(-(upper - pars)/(-pars + lower))
+    }
+    return(ans)
+}
+

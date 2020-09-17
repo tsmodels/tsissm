@@ -1,0 +1,5 @@
+# 2020-09-16 v0.1.5 [AG]
+- Added parameter transformation function for unconstrained optimizers (optim/Nelder-Mead)
+- Fixed specification for cases without seasonality or regular seasonality (bug in the ss_matrices.R file)
+- Added some checks to tsbacktest to not fail completely if an estimation had problems, instead returning
+NA's for the predictions of that run and calculating metrics on only good data (non NA)
