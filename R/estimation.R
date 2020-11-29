@@ -21,7 +21,8 @@ estimate.tsissm.spec <- function(object, solver = "nlminb", control = list(trace
     } else if (solver == "optim") {
         if (is.null(control$maxit)) control$maxit <- 5000
         control$parscale <- object$parmatrix[estimate == 1]$scale
-        opt <- optim(par = pars, control = control, method = "Nelder-Mead", fn = loglik_fun_unc, obj = object)
+        pars <- transform_pars(pars, lower =  object$parmatrix[estimate == 1]$lower, upper = object$parmatrix[estimate == 1]$upper, inverse = TRUE)
+        opt <- optim(par = pars, control = control, method = "BFGS", fn = loglik_fun_unc, obj = object)
         pars <- opt$par
         pars <- transform_pars(pars, object$parmatrix[estimate == 1]$lower, object$parmatrix[estimate == 1]$upper)
     } else if (solver == "solnp") {
@@ -116,7 +117,7 @@ loglik_fun <- function(pars, obj)
     parnames <- names(pars)
     if (sum(obj$arma$order) > 0) {
         if (arma_conditions(pars, parnames)) {
-            llh <- get("issm_llh", solver_env) + 0.1*(abs(get("issm_llh", solver_env)))
+            llh <- get("issm_llh", solver_env) + 0.25*(abs(get("issm_llh", solver_env)))
             return(llh)
         }
     }
@@ -133,7 +134,7 @@ loglik_fun <- function(pars, obj)
                       mdim = mdim)
 
     if (!is.finite(f$loglik) | f$condition == 1 ) {
-        llh <- get("issm_llh", solver_env) + 0.1*(abs(get("issm_llh", solver_env)))
+        llh <- get("issm_llh", solver_env) + 0.25*(abs(get("issm_llh", solver_env)))
     } else{
         llh <- f$loglik
         assign("issm_llh", llh, envir = solver_env)
@@ -161,7 +162,7 @@ loglik_fun_unc <- function(pars, obj)
     parnames <- names(pars)
     if (sum(obj$arma$order) > 0) {
         if (arma_conditions(pars, parnames)) {
-            llh <- get("issm_llh", solver_env) + 0.1*(abs(get("issm_llh", solver_env)))
+            llh <- get("issm_llh", solver_env) + 0.25*(abs(get("issm_llh", solver_env)))
             return(llh)
         }
     }
@@ -178,7 +179,7 @@ loglik_fun_unc <- function(pars, obj)
                        mdim = mdim)
     
     if (!is.finite(f$loglik) | f$condition == 1 ) {
-        llh <- get("issm_llh", solver_env) + 0.1*(abs(get("issm_llh", solver_env)))
+        llh <- get("issm_llh", solver_env) + 0.25*(abs(get("issm_llh", solver_env)))
     } else{
         llh <- f$loglik
         assign("issm_llh", llh, envir = solver_env)

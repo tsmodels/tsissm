@@ -381,11 +381,11 @@ ss_matrices <- function(y, slope = TRUE, damped_slope = FALSE, frequency = 1, ty
         tmp <- ss_slope(slope = slope, damped_slope = damped_slope, frequency = frequency, type = type, K = K, ar = ar, ma = ma)
         pars <- c(pars, "beta")
         lower_bounds <- c(lower_bounds, 1e-12)
-        upper_bounds <- c(upper_bounds, 1 - 1e-8)
+        upper_bounds <- c(upper_bounds, 1 - 1e-2)
         if (damped_slope) {
             pars <- c(pars, "phi")
             lower_bounds <- c(lower_bounds, 0.5)
-            upper_bounds <- c(upper_bounds, 1 - 1e-8)
+            upper_bounds <- c(upper_bounds, 1)
         }
         F0 <- cbind(F0, tmp$f0)
         F1 <- cbind(F1, tmp$f1)
@@ -400,8 +400,8 @@ ss_matrices <- function(y, slope = TRUE, damped_slope = FALSE, frequency = 1, ty
     if (frequency[1] > 1) {
         tmp <- ss_seasonal(slope = slope, frequency = frequency, type = type, K = K, ar = ar, ma = ma)
         pars <- c(pars, unique(tmp$g_names))
-        lower_bounds <- c(lower_bounds, rep(-0.01, length(unique(tmp$g_names))))
-        upper_bounds <- c(upper_bounds, rep( 1, length(unique(tmp$g_names))))
+        lower_bounds <- c(lower_bounds, rep( -0.01, length(unique(tmp$g_names))))
+        upper_bounds <- c(upper_bounds, rep( 0.99, length(unique(tmp$g_names))))
         F0 <- cbind(F0, tmp$f0)
         F1 <- cbind(F1, tmp$f1)
         F2 <- cbind(F2, tmp$f2)
