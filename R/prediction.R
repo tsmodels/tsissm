@@ -34,14 +34,14 @@ predict.tsissm.estimate <- function(object, h = 12, newxreg = NULL, nsim = 1000,
         if (length(innov) != (h * nsim)) {
             stop("\nlength innov must be nsim x h")
         }
-        if (any(innov) == 0) {
+        if (any(innov == 0)) {
             innov[which(innov == 0)] <- 1e-12
         }
         if ( any(innov == 1)) {
             innov[which(innov == 1)] <- 1 - 1e-12
         }
         innov <- matrix(innov, h, nsim)
-        E <- qnorm(innov)
+        E <- qnorm(innov, sd = sigma.res)
     }
     xseed <- tail(object$model$states, 1)
     if (!is.null(init_states)) {
