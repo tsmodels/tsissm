@@ -1,3 +1,7 @@
+# 2021-04-19 v0.1.6 [AG]
+- Exported tsmetric method on predict object and fixed an issue with calculating
+MASE (by passing lowest frequency to object).
+
 # 2020-09-16 v0.1.5 [AG]
 - Added parameter transformation function for unconstrained optimizers (optim/Nelder-Mead)
 - Fixed specification for cases without seasonality or regular seasonality (bug in the ss_matrices.R file)

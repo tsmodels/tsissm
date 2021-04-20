@@ -304,7 +304,7 @@ tsmetrics.tsissm.predict = function(object, actual, alpha = 0.1, ...)
     m_mape <- mape(actual, colMeans(object$distribution))
     m_bias <- bias(actual, colMeans(object$distribution))
     m_mslre <- mslre(actual, colMeans(object$distribution))
-    m_mase <- mase(actual, colMeans(object$distribution), object$original_series, frequency = object$spec$target$frequency[1])
+    m_mase <- mase(actual, colMeans(object$distribution), object$original_series, frequency = object$frequency[1])
     if (!is.null(alpha)) {
         m_mis <- mis(actual, lower = apply(object$distribution, 2, quantile, alpha/2), upper = apply(object$distribution, 2, quantile, 1 - alpha/2), alpha = alpha)
     } else {
