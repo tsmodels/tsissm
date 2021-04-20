@@ -80,7 +80,7 @@ predict.tsissm.estimate <- function(object, h = 12, newxreg = NULL, nsim = 1000,
     spec$parmatrix <- object$parmatrix
     zList <- list(original_series = xts(object$spec$target$y_orig, object$spec$target$index),
                   distribution = ysim, mean = zoo(colMeans(ysim), forc_dates), h = h,
-                  spec = spec, states = states, decomp = tsdecompose(object))
+                  spec = spec, states = states, decomp = tsdecompose(object), frequency = ifelse(is.null(object$spec$seasonal$seasonal_frequency[1]),1,object$spec$seasonal$seasonal_frequency[1]))
     class(zList) <- c("tsissm.predict","tsmodel.predict")
     return(zList)
 }
