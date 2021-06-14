@@ -26,7 +26,7 @@ predict.tsissm.estimate <- function(object, h = 12, newxreg = NULL, nsim = 1000,
     act <- object$spec$transform$transform(object$spec$target$y_orig, lambda = object$parmatrix[parameters == "lambda"]$optimal)
     fit <- object$spec$transform$transform(object$model$fitted, lambda = object$parmatrix[parameters == "lambda"]$optimal)
     res <- act - fit
-    sigma.res <- sd(res)
+    sigma.res <- sd(res, na.rm = TRUE)
     
     if (is.null(innov)) {
         E <- matrix(rnorm(h * nsim, 0, sigma.res), ncol = h, nrow = nsim)

@@ -7,6 +7,11 @@ issm_modelspec <- function(y, slope = TRUE, slope_damped = FALSE, seasonal = FAL
         stop("\ny is not an xts object...refusing to continue. Please fix and resubmit.")
     }
     n <- NROW(y)
+    good <- rep(1, n)
+    if (any(is.na(y))) {
+        ix <- which(is.na(y))
+        good[ix] <- 0
+    }
     if (is.null(sampling)) {
         sampling <- sampling_frequency(index(y))
     }
