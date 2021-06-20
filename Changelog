@@ -1,3 +1,10 @@
+# 2021-06-20 v0.1.7 [AG]
+- Added handling of missing values using the prediction filter step and calculation of the
+likelihood only for non missing values.
+- Added autodiff option (calls tsissmad package)
+- Prettified the returned summary to display abbreviated model description and use
+kable (similar to how tsets displays the summary).
+
 # 2021-04-19 v0.1.6 [AG]
 - Exported tsmetric method on predict object and fixed an issue with calculating
 MASE (by passing lowest frequency to object).
