@@ -21,7 +21,7 @@ estimate.tsissm.spec <- function(object, solver = "nlminb", control = list(trace
         parameters <- NULL
         object$target$y <- object$transform$transform(object$target$y_orig, f$parmatrix[parameters == "lambda"]$optimal)
         f$spec <- object
-        f$opt <- opt$opt
+        f$opt <- opt$solver_out
         f$opt$elapsed <- difftime(Sys.time(), tic, units = "mins")
         f$hessian <- opt$hessian
         f$autodiff <- TRUE
