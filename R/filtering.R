@@ -61,7 +61,7 @@ tsfilter.tsissm.estimate <- function(object, y = NULL, newxreg = NULL, ...)
                       lambda_ = as.numeric(pars["lambda"]),
                       xreg_ = as.vector(X),
                       kappa_ = S[list("kappa")]$values,
-                      mdim = mdim, xseed_ = as.vector(xseed))
+                      mdim = mdim, xseed_ = as.vector(xseed), good_ = as.numeric(good))
     # update all vectors with the y
     object$spec$target$y_orig <- c(object$spec$target$y_orig, as.numeric(yneworig))
     object$spec$target$index <- c(object$spec$target$index, newindex)
