@@ -13,7 +13,7 @@ Description: Unobserved Components Model using the Linear Innovation State Space
 SystemRequirements: C++11, GNU make
 Depends: R (>= 3.5.0), Rcpp (>= 0.12.9), tsmethods
 LinkingTo: Rcpp (>= 0.12.9), RcppArmadillo
-Imports: methods, tsaux, zoo, xts, data.table, nloptr, Rsolnp, viridis, EnvStats, doSNOW, foreach, parallel, tsissmad
+Imports: methods, tsaux, zoo, xts, data.table, nloptr, Rsolnp, viridis, EnvStats, doSNOW, foreach, parallel, tsissmad, knitr
 License: GPL-2
 Encoding: UTF-8
 LazyData: true

@@ -20,18 +20,85 @@ residuals.tsissm.estimate <- function(object, raw = FALSE, h = 1, cores = 1, see
 }
 
 
+
+.make_standard_errors <- function(object)
+{
+    pmatrix <- object$parmatrix
+    pars <- pmatrix[estimate == 1]$optimal
+    H <- object$hessian
+    se <- suppressWarnings(sqrt(diag(solve(H))))
+    tvalues <- pars/se
+    pvalues <- 2*(1 - pnorm(abs(tvalues)))
+    return(data.frame("Std. Error" = se,"t value" = tvalues, "Pr(>|t|)" = pvalues, check.names = FALSE))
+}
+
+.make_model_description <- function(object) {
+    model <- "A"
+    if (object$spec$slope$include_slope) {
+        model <- c(model,"A")
+            if (object$spec$slope$include_damped) {
+                model <- c(model,"d")                
+            }
+    } else {
+        model = c(model, "N")
+    }
+    if (object$spec$seasonal$include_seasonal) {
+        model <- c(model, "A")
+        if (object$spec$seasonal$seasonal_type == "trigonometric") {
+            s <- sapply(1:length(object$spec$seasonal$seasonal_frequency), function(i) {
+                if (i < length(object$spec$seasonal$seasonal_frequency)) {
+                    paste0(object$spec$seasonal$seasonal_frequency[i],"{",object$spec$seasonal$seasonal_harmonics[i],"}/")
+                } else {
+                    paste0(object$spec$seasonal$seasonal_frequency[i],"{",object$spec$seasonal$seasonal_harmonics[i],"}")
+                }
+            })
+        } else {
+            s <- sapply(1:length(object$spec$seasonal$seasonal_frequency), function(i) {
+                paste0(object$spec$seasonal$seasonal_frequency[i],"{}")
+            })
+        }
+        model <- c(model,"[",s,"]")
+    } else {
+        model <- c(model,"N")
+    }
+    model <- c(model,"+ARMA(",object$spec$arma$order[1],",",object$spec$arma$order[2],")")
+    model <- paste0(model,collapse = "")
+    return(model)
+}
 summary.tsissm.estimate <- function(object, digits = 4, ...)
 {
     estimate <- NULL
-    cf <- object$parmatrix[estimate == 1, c("parameters","optimal","lower","upper")]
-    cf$optimal <- round(cf$optimal, digits + 2)
-    cf$lower <- round(cf$lower,2)
-    cat("\n-------------------------------------")
-    cat("\ntsissm:      Summary                 ")
-    cat("\n-------------------------------------\n")
-    print(cf, row.names = FALSE, digits = digits)
-    cat("\n-------------------------------------")
-    tsm <- tsmetrics(object)
+    model <- .make_model_description(object)
+    if (object$autodiff) {
+        printout <- object$parmatrix[estimate == 1, c("parameters","optimal","lower","upper")]
+        colnames(printout) <- c("Parameter","Est[Value]","Lower","Upper")
+        printout <- as.data.frame(printout)
+        S <- try(suppressWarnings(.make_standard_errors(object)), silent = TRUE)
+        if(!inherits(S,'try-error')){
+            printout <- cbind(printout, S)
+        }
+        cat("ISSM Model:",model)
+        if (object$parmatrix[parameters == "lambda"]$estimate == 0) {
+            lambda_df <- as.data.frame(object$parmatrix[parameters == "lambda",c("parameters","optimal","lower","upper")])
+            colnames(lambda_df) <- c("Parameter","Est[Value]","Lower","Upper")
+            lambda_df <- cbind(lambda_df, data.frame("Std. Error" = as.numeric(NaN),"t value" = as.numeric(NaN),"Pr(>|t|)" = as.numeric(NaN), check.names = FALSE))
+            printout <- rbind(printout, lambda_df)
+        }
+        print(kable(printout, right = FALSE, digits = digits, row.names = FALSE, format = "simple"))
+        tsm <- tsmetrics(object)
+    } else {
+        printout <- object$parmatrix[estimate == 1, c("parameters","optimal","lower","upper")]
+        colnames(printout) <- c("Parameter","Est[Value]","Lower","Upper")
+        printout <- as.data.frame(printout)
+        if (object$parmatrix[parameters == "lambda"]$estimate == 0) {
+            lambda_df <- as.data.frame(object$parmatrix[parameters == "lambda",c("parameters","optimal","lower","upper")])
+            colnames(lambda_df) <- c("Parameter","Est[Value]","Lower","Upper")
+            printout <- rbind(printout, lambda_df)
+        }
+        cat("ISSM Model:",model)
+        print(kable(printout, right = FALSE, digits = digits, row.names = FALSE, format = "simple"))
+        tsm <- tsmetrics(object)
+    }
     return(invisible(tsm))
 }
 

@@ -11,6 +11,7 @@ importFrom("graphics","grid", "legend", "lines", "par", "plot","points","abline"
 importFrom("grDevices", "gray","colorRampPalette","n2mfrow")
 importFrom("zoo","index","as.zoo","zoo","coredata","na.locf")
 importFrom("Rsolnp","solnp")
+importFrom("knitr","kable")
 importFrom("tsissmad","estimate_ad.tsissm.spec")
 importFrom("xts","xts","as.xts","is.xts","endpoints")
 importFrom("EnvStats", "rosnerTest")

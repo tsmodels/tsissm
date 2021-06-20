@@ -76,6 +76,7 @@ estimate.tsissm.spec <- function(object, solver = "nlminb", control = list(trace
         f$spec <- object
         f$opt <- opt
         f$opt$elapsed <- difftime(Sys.time(), tic, units = "mins")
+        f$autodiff <- FALSE
         class(f) <- "tsissm.estimate"
     }
     return(f)
