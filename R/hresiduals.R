@@ -50,7 +50,7 @@ hresiduals.issm <- function(object,  h = 12, nsim = 1000, start = 1, seed = NULL
         actual <- object$spec$target$y_orig[(start):(start + h - 1)]
     }
 
-    sigma.res <- sd(residuals(object, h = 1, raw = TRUE))
+    sigma.res <- sd(residuals(object, h = 1, raw = TRUE), na.rm = TRUE)
     E <- matrix(rnorm(h * nsim, 0, sigma.res), ncol = h, nrow = nsim)
 
     xseed <- object$model$states[start, ,drop = FALSE]

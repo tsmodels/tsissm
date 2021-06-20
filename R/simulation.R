@@ -61,13 +61,13 @@ simulate.tsissm.estimate <- function(object, nsim = 1, seed = NULL, h = NULL, ne
     act <- object$spec$transform$transform(object$spec$target$y_orig, lambda = object$parmatrix[parameters == "lambda"]$optimal)
     fit <- object$spec$transform$transform(object$model$fitted, lambda = object$parmatrix[parameters == "lambda"]$optimal)
     res <- act - fit
-    sigma_res <- sd(res)
+    sigma_res <- sd(res, na.rm = TRUE)
     
     if (bootstrap) {
         act <- object$spec$transform$transform(object$spec$target$y_orig, lambda = object$parmatrix[parameters == "lambda"]$optimal)
         fit <- object$spec$transform$transform(object$model$fitted, lambda = object$parmatrix[parameters == "lambda"]$optimal)
         res <- act - fit
-        res <- res * sigma_scale
+        res <- na.omit(res) * sigma_scale
         E <- matrix(sample(res, h * nsim, replace = TRUE), ncol = h, nrow = nsim)
     } else {
         if (is.null(innov)) {
@@ -179,6 +179,7 @@ simulate.tsissm.estimate <- function(object, nsim = 1, seed = NULL, h = NULL, ne
                 s_names <- c(s_names,paste0("Seasonal",object$spec$seasonal$seasonal_frequency[j]))
             }
         } else {
+            j <- 1
             for (i in 1:ns) {
                 tmp <- do.call(rbind, lapply(1:nsim, function(i){
                     matrix(t(w_t[,nstart[j]:(nstart[j] + frequency[j] - 1)] %*% t(states[-1, nstart[j]:(nstart[j] + frequency[j] - 1), i])), nrow = 1)

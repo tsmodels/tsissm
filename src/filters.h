@@ -8,14 +8,14 @@
 Rcpp::List issestimation(Rcpp::NumericVector& , Rcpp::NumericVector& , Rcpp::NumericVector& ,
                          Rcpp::NumericVector& , Rcpp::NumericVector& , Rcpp::NumericVector& ,
                          Rcpp::IntegerVector& , Rcpp::NumericVector& , Rcpp::NumericVector& ,
-                         Rcpp::NumericVector& );
+                         Rcpp::NumericVector&, Rcpp::NumericVector&);
 Rcpp::List issfilter(Rcpp::NumericVector& , Rcpp::NumericVector& , Rcpp::NumericVector& ,
                      Rcpp::NumericVector& , Rcpp::NumericVector& , Rcpp::NumericVector& ,
                      Rcpp::IntegerVector& , Rcpp::NumericVector& , Rcpp::NumericVector& ,
-                     Rcpp::NumericVector& , Rcpp::NumericVector& );
+                     Rcpp::NumericVector& , Rcpp::NumericVector&, Rcpp::NumericVector&);
 Rcpp::List isspredict(Rcpp::NumericVector& , Rcpp::NumericVector& , Rcpp::NumericVector& , Rcpp::NumericVector& ,
                       Rcpp::NumericVector& , Rcpp::NumericVector& , Rcpp::IntegerVector& ,
-                      Rcpp::NumericVector& , Rcpp::NumericVector& , Rcpp::NumericVector& );
+                      Rcpp::NumericVector& , Rcpp::NumericVector& , Rcpp::NumericVector&);
 
 // inline/template functions
 
@@ -46,11 +46,15 @@ inline
 void
 initstate(const int time, const arma::vec& w, const arma::vec& ytrans, const arma::vec& g,
           const arma::vec& kappa, const arma::mat& F, const arma::mat& D, const arma::mat& xreg,
-          arma::vec& yaux, arma::vec& eaux, arma::mat& waux, arma::mat& xaux)
+          arma::vec& yaux, arma::vec& eaux, arma::mat& waux, arma::mat& xaux, const arma::vec& good)
 {
     for (int i = 1; i < time; i++) {
         yaux(i) = arma::as_scalar(xaux.row(i-1) * w + xreg.row(i) * kappa);
-        eaux(i) = ytrans(i) - yaux(i);
+        if (good(i) > 0.5) {
+            eaux(i) = ytrans(i) - yaux(i);
+        } else {
+            eaux(i) = 0.0;
+        }
         xaux.row(i) = arma::trans(F * xaux.row(i-1).t() + g * eaux(i));
         waux.row(i) = waux.row(i-1) * D;
     }
@@ -99,6 +103,7 @@ const int narma = mdim[5];                                                      
 const int nxreg = mdim[6];                                                                      \
 const double lambda = lambda_[0];                                                               \
 arma::vec y = Rcpp::as<arma::vec>(y_);                                                          \
+arma::vec good = Rcpp::as<arma::vec>(good_);                                                    \
 arma::vec yhat = arma::zeros(time + 1);                                                         \
 arma::vec ytrans = boxcox(y, lambda);                                                           \
 arma::vec error = arma::zeros<arma::vec>(time + 1);                                             \
@@ -137,6 +142,7 @@ const int narma = mdim[5];                                                      
 const int nxreg = mdim[6];                                                                      \
 const double lambda = lambda_[0];                                                               \
 arma::vec y = Rcpp::as<arma::vec>(y_);                                                          \
+arma::vec good = Rcpp::as<arma::vec>(good_);                                                    \
 arma::vec yhat = arma::zeros(time + 1);                                                         \
 arma::vec ytrans = boxcox(y, lambda);                                                           \
 arma::vec error = arma::zeros<arma::vec>(time + 1);                                             \

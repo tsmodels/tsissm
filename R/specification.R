@@ -2,29 +2,29 @@ issm_modelspec <- function(y, slope = TRUE, slope_damped = FALSE, seasonal = FAL
                            seasonal_type = c("trigonometric","regular"), seasonal_harmonics = NULL,
                            ar = 0, ma = 0, xreg = NULL, lambda = 1, sampling = NULL, ...)
 {
-    # checks
     if (!is.xts(y)) {
         stop("\ny is not an xts object...refusing to continue. Please fix and resubmit.")
     }
+    if (any(y <= 0, na.rm = TRUE)) 
+        stop("\nThe issm model only supports strictly positive data.")
     n <- NROW(y)
-    good <- rep(1, n)
-    if (any(is.na(y))) {
-        ix <- which(is.na(y))
-        good[ix] <- 0
-    }
     if (is.null(sampling)) {
         sampling <- sampling_frequency(index(y))
+    }
+    good <- rep(1, NROW(y))
+    if (any(is.na(y))) {
+        good[which(is.na(y))] <- 0
     }
     if (!is.null(xreg)) {
         if (nrow(xreg) != n) stop("\nxreg should have the same number of rows as y")
         if (ncol(xreg) > (n/2)) warning("\nnumber of regressors greater than half the length of y!")
-        if (is.null(colnames(xreg))) colnames(xreg) <- paste0("reg.",1:ncol(xreg))
+        if (is.null(colnames(xreg))) 
+            colnames(xreg) <- paste0("reg.", 1:ncol(xreg))
         include_xreg <- TRUE
         xreg <- coredata(xreg)
     } else {
-        # fix to zero valued matrix
         xreg <- matrix(0, ncol = 1, nrow = n)
-        colnames(xreg) <- paste0("reg.",1)
+        colnames(xreg) <- paste0("reg.", 1)
         include_xreg <- FALSE
     }
     spec <- list()
@@ -44,7 +44,7 @@ issm_modelspec <- function(y, slope = TRUE, slope_damped = FALSE, seasonal = FAL
     }
     spec$seasonal$include_seasonal <- as.logical(seasonal)
     if (seasonal) {
-        if (any(is.null(seasonal_frequency))) {
+        if (any(is.null(seasonal_frequency))) { 
             stop("\nseasonal_frequency cannot be NULL if seasonal is set to TRUE")
         }
         if (any(seasonal_frequency < 2)) {
@@ -61,7 +61,6 @@ issm_modelspec <- function(y, slope = TRUE, slope_damped = FALSE, seasonal = FAL
         if (any(seasonal_frequency > (n/2))) {
             warning("\nseasonal_frequency contains a value(s) which are greater than half the length of y!")
         }
-        # length of frequency vs harmonics for trig
         if (length(seasonal_frequency) > 2) {
             seasonal_frequency <- sort(seasonal_frequency)
             if (any(diff(seasonal_frequency) == 0)) {
@@ -74,11 +73,11 @@ issm_modelspec <- function(y, slope = TRUE, slope_damped = FALSE, seasonal = FAL
     }
     spec$seasonal$seasonal_harmonics <- seasonal_harmonics[1:length(seasonal_frequency)]
     spec$seasonal$seasonal_frequency <- seasonal_frequency
-    spec$seasonal$seasonal_type <- match.arg(seasonal_type[1], c("trigonometric","regular"))
+    spec$seasonal$seasonal_type <- match.arg(seasonal_type[1], c("trigonometric", "regular"))
     spec$xreg$include_xreg <- include_xreg
     spec$xreg$xreg <- xreg
-    
-    if (is.null(lambda)) lambda <- 1
+    if (is.null(lambda)) 
+        lambda <- 1
     if (is.na(lambda)) {
         include_lambda <- TRUE
         transform <- box_cox(lambda = lambda, lower = 0, upper = 1.5)
@@ -95,10 +94,11 @@ issm_modelspec <- function(y, slope = TRUE, slope_damped = FALSE, seasonal = FAL
     }
     spec$transform <- transform
     spec$arma$order <- c(ar, ma)
-    M <- ss_matrices(y = y, slope = spec$slope$include_slope, damped_slope = spec$slope$include_damped,
-                     frequency = spec$seasonal$seasonal_frequency, type = spec$seasonal$seasonal_type,
-                     K = spec$seasonal$seasonal_harmonics, ar = spec$arma$order[1], ma = spec$arma$order[2],
-                     include_xreg = include_xreg, xreg = xreg)
+    M <- ss_matrices(y = y, slope = spec$slope$include_slope, 
+                     damped_slope = spec$slope$include_damped, frequency = spec$seasonal$seasonal_frequency, 
+                     type = spec$seasonal$seasonal_type, K = spec$seasonal$seasonal_harmonics, 
+                     ar = spec$arma$order[1], ma = spec$arma$order[2], include_xreg = include_xreg, 
+                     xreg = xreg)
     S <- M$setup
     ipars <- issm_init_pars(lambda = lambda, frequency = seasonal_frequency)
     S <- rbind(S, data.table(matrix = "xreg", values = as.vector(coredata(xreg)), pars = NA))
@@ -109,13 +109,12 @@ issm_modelspec <- function(y, slope = TRUE, slope_damped = FALSE, seasonal = FAL
     upper <- M$upper
     if (slope) {
         if (!spec$slope$include_damped) {
-            ix <- which(grepl("phi",pars))
+            ix <- which(grepl("phi", pars))
             est[ix] <- 0
             lower[ix] <- 1
             upper[ix] <- 1
         }
     }
-    # else already included
     if (include_lambda) {
         pars <- c(pars, "lambda")
         lower <- c(lower, 1e-12)
@@ -128,19 +127,21 @@ issm_modelspec <- function(y, slope = TRUE, slope_damped = FALSE, seasonal = FAL
         est <- c(est, 0)
     }
     if (include_xreg) {
+        lower_x <- -1e8
+        upper_x <-  1e8
         S <- rbind(S, data.table(matrix = "kappa", values = rep(as.numeric(NA), ncol(xreg)), pars = paste0("kappa.",1:ncol(xreg))))
         pars <- c(pars, paste0("kappa.",1:ncol(xreg)))
-        lower <- c(lower, rep(-Inf, ncol(xreg)))
-        upper <- c(upper, rep( Inf, ncol(xreg)))
+        lower <- c(lower, rep(lower_x, ncol(xreg)))
+        upper <- c(upper, rep(upper_x, ncol(xreg)))
         est <- c(est, rep(1, ncol(xreg)))
     } else {
-        S <- rbind(S, data.table(matrix = "kappa", values = rep(as.numeric(0), ncol(xreg)), pars = paste0("kappa.",1:ncol(xreg))))
-        pars <- c(pars, paste0("kappa.",1:ncol(xreg)))
+        S <- rbind(S, data.table(matrix = "kappa", values = rep(as.numeric(0), ncol(xreg)), pars = paste0("kappa.", 1:ncol(xreg))))
+        pars <- c(pars, paste0("kappa.", 1:ncol(xreg)))
         lower <- c(lower, rep(0, ncol(xreg)))
         upper <- c(upper, rep(0, ncol(xreg)))
         est <- c(est, rep(0, ncol(xreg)))
     }
-    init <- ipars[sapply(1:length(pars), function(i) which(grepl(gsub("[^a-zA-A]","",pars[i]), ipars$variable)))]
+    init <- ipars[sapply(1:length(pars), function(i) which(grepl(gsub("[^a-zA-A]", "", pars[i]), ipars$variable)))]
     iscale <- init$scale
     init <- init$value
     names(init) <- pars
@@ -150,6 +151,7 @@ issm_modelspec <- function(y, slope = TRUE, slope_damped = FALSE, seasonal = FAL
     spec$dims <- dims
     spec$parmatrix <- parmatrix
     spec$idmatrix <- M$idmatrix
+    spec$good <- good
     class(spec) <- c("tsissm.spec", "tsmodel.spec")
     return(spec)
 }

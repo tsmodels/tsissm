@@ -11,7 +11,7 @@ Generates an expanding window walk forward backtest.
 \method{tsbacktest}{tsissm.spec}(object, start = floor(length(object$target$y_orig)/2),
 end = length(object$target$y_orig), h = 1, alpha = NULL,
 cores = 1, data_name = "y", save_output = FALSE, save_dir = "~/tmp/",
-solver = "optim", trace = FALSE, ...)
+solver = "optim", autodiff = FALSE, trace = FALSE, ...)
 }
 \arguments{
 \item{object}{
@@ -53,6 +53,10 @@ the date on which the model was estimated.
 }
 \item{solver}{
 The solver to use.
+}
+\item{autodiff}{
+Whether to use automatic differentiation for estimation. This makes use
+of the tsissmad package.
 }
 \item{trace}{
 Whether to show the progress bar.

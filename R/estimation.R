@@ -1,6 +1,12 @@
-estimate.tsissm.spec <- function(object, solver = "nlminb", control = list(trace = 0), ...)
+estimate.tsissm.spec <- function(object, solver = "nlminb", control = list(trace = 0), autodiff = FALSE, ...)
 {
     # initialize parameters
+    if (object$seasonal$include_seasonal & object$seasonal$seasonal_type == "regular") {
+        if (autodiff) {
+            autodiff <- FALSE
+            warning("\nautodiff only currently supported for trigonometric seasonality (switching to non autodiff)")
+        }
+    }
     estimate <- NULL
     tic <- Sys.time()
     solver_env = new.env(hash = TRUE)
@@ -8,56 +14,70 @@ estimate.tsissm.spec <- function(object, solver = "nlminb", control = list(trace
     object$solver_env <- solver_env
     pars <- object$parmatrix[estimate == 1]$initial
     assign("issm_llh", 1, envir = solver_env)
-    if (solver == "nlminb") {
-        if (is.null(control$iter.max)) control$iter.max <- 5000
-        if (is.null(control$eval.max)) control$eval.max <- 5000
-        control2 <- list()
-        control2$maxit <- 100
-        control2$trace <- 0
-        opt <- optim(par = pars, control = control2, method = "Nelder-Mead", fn = loglik_fun, obj = object)
-        opt <- nlminb(start = opt$par, control = control, objective = loglik_fun, lower = object$parmatrix[estimate == 1]$lower,
-                      upper = object$parmatrix[estimate == 1]$upper, obj = object)
-        pars <- opt$par
-    } else if (solver == "optim") {
-        if (is.null(control$maxit)) control$maxit <- 5000
-        control$parscale <- object$parmatrix[estimate == 1]$scale
-        pars <- transform_pars(pars, lower =  object$parmatrix[estimate == 1]$lower, upper = object$parmatrix[estimate == 1]$upper, inverse = TRUE)
-        opt <- optim(par = pars, control = control, method = "BFGS", fn = loglik_fun_unc, obj = object)
-        pars <- opt$par
-        pars <- transform_pars(pars, object$parmatrix[estimate == 1]$lower, object$parmatrix[estimate == 1]$upper)
-    } else if (solver == "solnp") {
-        control2 <- list()
-        control2$maxit <- 100
-        control2$trace <- 0
-        opt <- optim(par = pars, control = control2, method = "Nelder-Mead", fn = loglik_fun, obj = object)
-        opt <- solnp(pars = opt$par, fun = loglik_fun, LB = object$parmatrix[estimate == 1]$lower,
-                     UB = object$parmatrix[estimate == 1]$upper, obj = object, control = control)
-        pars <- opt$pars
-    }
-    object$xseed <- get("xseed", solver_env)
-    if (is.null(object$xseed)) {
-        if (solver == "optim" | solver == "solnp") {
-            opt <- nlminb(start = pars, control = control, objective = loglik_fun, lower = object$parmatrix[estimate == 1]$lower,
+    if (autodiff) {
+        opt <- estimate_ad(object, solver = solver, control = control, ...)
+        object$xseed <- opt$xseed
+        f <- iss_filter(opt$pars, obj = object)
+        parameters <- NULL
+        object$target$y <- object$transform$transform(object$target$y_orig, f$parmatrix[parameters == "lambda"]$optimal)
+        f$spec <- object
+        f$opt <- opt$opt
+        f$opt$elapsed <- difftime(Sys.time(), tic, units = "mins")
+        f$hessian <- opt$hessian
+        f$autodiff <- TRUE
+        class(f) <- "tsissm.estimate"
+    } else {
+        if (solver == "nlminb") {
+            if (is.null(control$iter.max)) control$iter.max <- 5000
+            if (is.null(control$eval.max)) control$eval.max <- 5000
+            control2 <- list()
+            control2$maxit <- 100
+            control2$trace <- 0
+            opt <- optim(par = pars, control = control2, method = "Nelder-Mead", fn = loglik_fun, obj = object)
+            opt <- nlminb(start = opt$par, control = control, objective = loglik_fun, lower = object$parmatrix[estimate == 1]$lower,
                           upper = object$parmatrix[estimate == 1]$upper, obj = object)
             pars <- opt$par
-        } else {
-            control2 <- list()
-            control2$maxit <- 5000
-            control2$parscale <- object$parmatrix[estimate == 1]$scale
-            opt <- optim(par = pars, control = control2, method = "Nelder-Mead", fn = loglik_fun, obj = object)
+        } else if (solver == "optim") {
+            if (is.null(control$maxit)) control$maxit <- 5000
+            control$parscale <- object$parmatrix[estimate == 1]$scale
+            pars <- transform_pars(pars, lower =  object$parmatrix[estimate == 1]$lower, upper = object$parmatrix[estimate == 1]$upper, inverse = TRUE)
+            opt <- optim(par = pars, control = control, method = "BFGS", fn = loglik_fun_unc, obj = object)
             pars <- opt$par
+            pars <- transform_pars(pars, object$parmatrix[estimate == 1]$lower, object$parmatrix[estimate == 1]$upper)
+        } else if (solver == "solnp") {
+            control2 <- list()
+            control2$maxit <- 100
+            control2$trace <- 0
+            opt <- optim(par = pars, control = control2, method = "Nelder-Mead", fn = loglik_fun, obj = object)
+            opt <- solnp(pars = opt$par, fun = loglik_fun, LB = object$parmatrix[estimate == 1]$lower,
+                         UB = object$parmatrix[estimate == 1]$upper, obj = object, control = control)
+            pars <- opt$pars
         }
+        object$xseed <- get("xseed", solver_env)
         if (is.null(object$xseed)) {
-            stop("\nproblem estimating model...exiting")
+            if (solver == "optim" | solver == "solnp") {
+                opt <- nlminb(start = pars, control = control, objective = loglik_fun, lower = object$parmatrix[estimate == 1]$lower,
+                              upper = object$parmatrix[estimate == 1]$upper, obj = object)
+                pars <- opt$par
+            } else {
+                control2 <- list()
+                control2$maxit <- 5000
+                control2$parscale <- object$parmatrix[estimate == 1]$scale
+                opt <- optim(par = pars, control = control2, method = "Nelder-Mead", fn = loglik_fun, obj = object)
+                pars <- opt$par
+            }
+            if (is.null(object$xseed)) {
+                stop("\nproblem estimating model...exiting")
+            }
         }
+        f <- iss_filter(pars, obj = object)
+        parameters <- NULL
+        object$target$y <- object$transform$transform(object$target$y_orig, f$parmatrix[parameters == "lambda"]$optimal)
+        f$spec <- object
+        f$opt <- opt
+        f$opt$elapsed <- difftime(Sys.time(), tic, units = "mins")
+        class(f) <- "tsissm.estimate"
     }
-    f <- iss_filter(pars, obj = object)
-    parameters <- NULL
-    object$target$y <- object$transform$transform(object$target$y_orig, f$parmatrix[parameters == "lambda"]$optimal)
-    f$spec <- object
-    f$opt <- opt
-    f$opt$elapsed <- difftime(Sys.time(), tic, units = "mins")
-    class(f) <- "tsissm.estimate"
     return(f)
 }
 
@@ -82,7 +102,7 @@ iss_filter <- function(pars, obj)
                       lambda_ = as.numeric(pars["lambda"]),
                       xreg_ = S[list("xreg")]$values,
                       kappa_ = S[list("kappa")]$values,
-                      mdim = mdim, xseed_ = obj$xseed)
+                      mdim = mdim, xseed_ = obj$xseed, good_ = as.numeric(obj$good))
     L <- list()
     L$fitted <- obj$transform$inverse(f$fitted[-1], lambda = pars["lambda"])
     L$residuals <- obj$target$y_orig - L$fitted
@@ -131,7 +151,7 @@ loglik_fun <- function(pars, obj)
                       lambda_ = as.numeric(pars["lambda"]),
                       xreg_ = S[list("xreg")]$values,
                       kappa_ = S[list("kappa")]$values,
-                      mdim = mdim)
+                      mdim = mdim, good_ = as.numeric(obj$good))
 
     if (!is.finite(f$loglik) | f$condition == 1 ) {
         llh <- get("issm_llh", solver_env) + 0.25*(abs(get("issm_llh", solver_env)))
@@ -176,7 +196,7 @@ loglik_fun_unc <- function(pars, obj)
                        lambda_ = as.numeric(pars["lambda"]),
                        xreg_ = S[list("xreg")]$values,
                        kappa_ = S[list("kappa")]$values,
-                       mdim = mdim)
+                       mdim = mdim, good_ = as.numeric(obj$good))
     
     if (!is.finite(f$loglik) | f$condition == 1 ) {
         llh <- get("issm_llh", solver_env) + 0.25*(abs(get("issm_llh", solver_env)))

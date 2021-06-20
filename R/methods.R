@@ -255,11 +255,11 @@ logLik.tsissm.estimate <- function(object, ...)
     parameters <- NULL
     estimate <- NULL
     np <- NROW(object$parmatrix[estimate == 1]) + ncol(object$model$xseed)
-    r <- residuals(object, scaled = TRUE)
+    r <- na.omit(residuals(object, scaled = TRUE))
     v <- sum(r^2)
     lambda <- object$parmatrix[parameters == "lambda"]$optimal
-    n <- NROW(object$spec$target$y_orig)
-    loglik <- -0.5 * n * log(2 * pi * (v/n)) - (1/(2 * (v/n))) * v + (lambda - 1) * sum(log(object$spec$target$y_orig))
+    n <- NROW(object$spec$target$y_orig[which(object$spec$good == 1)])
+    loglik <- -0.5 * n * log(2 * pi * (v/n)) - (1/(2 * (v/n))) * v + (lambda - 1) * sum(log(object$spec$target$y_orig[which(object$spec$good == 1)]))
     return(structure(loglik, df = np + 1, class = "logLik"))
 }
 

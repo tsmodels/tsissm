@@ -25,7 +25,7 @@ tsdiagnose.tsissm.estimate <- function(object, plot = FALSE, ...)
     cat("\nWeighted Ljung-Box Test [scaled residuals]")
     cat("\n------------------------------------------\n")
     df <- sum(object$spec$arma$order)
-    r <- residuals(object, scaled = TRUE)
+    r <- as.numeric(na.omit(residuals(object, scaled = TRUE)))
     if (sum(object$spec$arma$order) > 0 ) j = 0 else j = 1
     b1 <- weighted_box_test(r, lag = 1, type = "Ljung-Box", fitdf = 0)
     b2j <- pmax(2 * df + df - 1, 1 + df + j)
@@ -38,9 +38,9 @@ tsdiagnose.tsissm.estimate <- function(object, plot = FALSE, ...)
                        statistic = c(b1$statistic[[1]], b2$statistic[[1]], b3$statistic[[1]],b4$statistic[[1]]),
                        pvalue = c(b1$p.value[[1]], b2$p.value[[1]],b3$p.value[[1]], b4$p.value[[1]]))
     print(lbsr, row.names = FALSE, digits = 3)
-    rtest <- rosnerTest(as.numeric(residuals(object)), k = 10)
+    rtest <- rosnerTest(as.numeric(na.omit(residuals(object))), k = 10)
     if (any(rtest$all.stats$Outlier)) {
-        out.index <- object$spec$target$index[rtest$all.stats$Obs.Num[rtest$all.stats$Outlier]]
+        out.index <- object$spec$target$index[which(object$spec$good == 1)][rtest$all.stats$Obs.Num[rtest$all.stats$Outlier]]
         cat("\nOutlier Diagnostics (based on Rosner Test)")
         cat("\n------------------------------------------")
         cat("\nOutliers:", as.character(out.index))
@@ -56,6 +56,6 @@ tsdiagnose.tsissm.estimate <- function(object, plot = FALSE, ...)
         qqnorm(r)
         qqline(r, col = 2)
     }
-    L <- list(armaroots = rt, D.eigenvalues = e, lb_test = lbsr, outliers = rtest$all.stats)
+    L <- list(armaroots = rt, D.eigenvalues = e, lb_test = lbsr, outliers = rtest$all.stats, outlier_index = out.index)
     return(invisible(L))
 }

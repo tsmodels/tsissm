@@ -7,8 +7,8 @@
 using namespace Rcpp;
 
 // issestimation
-Rcpp::List issestimation(NumericVector& f0_, NumericVector& f1_, NumericVector& f2_, NumericVector& w_, NumericVector& g_, NumericVector& y_, IntegerVector& mdim, NumericVector& lambda_, NumericVector& xreg_, NumericVector& kappa_);
-RcppExport SEXP _tsissm_issestimation(SEXP f0_SEXP, SEXP f1_SEXP, SEXP f2_SEXP, SEXP w_SEXP, SEXP g_SEXP, SEXP y_SEXP, SEXP mdimSEXP, SEXP lambda_SEXP, SEXP xreg_SEXP, SEXP kappa_SEXP) {
+Rcpp::List issestimation(NumericVector& f0_, NumericVector& f1_, NumericVector& f2_, NumericVector& w_, NumericVector& g_, NumericVector& y_, IntegerVector& mdim, NumericVector& lambda_, NumericVector& xreg_, NumericVector& kappa_, NumericVector& good_);
+RcppExport SEXP _tsissm_issestimation(SEXP f0_SEXP, SEXP f1_SEXP, SEXP f2_SEXP, SEXP w_SEXP, SEXP g_SEXP, SEXP y_SEXP, SEXP mdimSEXP, SEXP lambda_SEXP, SEXP xreg_SEXP, SEXP kappa_SEXP, SEXP good_SEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -22,13 +22,14 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< NumericVector& >::type lambda_(lambda_SEXP);
     Rcpp::traits::input_parameter< NumericVector& >::type xreg_(xreg_SEXP);
     Rcpp::traits::input_parameter< NumericVector& >::type kappa_(kappa_SEXP);
-    rcpp_result_gen = Rcpp::wrap(issestimation(f0_, f1_, f2_, w_, g_, y_, mdim, lambda_, xreg_, kappa_));
+    Rcpp::traits::input_parameter< NumericVector& >::type good_(good_SEXP);
+    rcpp_result_gen = Rcpp::wrap(issestimation(f0_, f1_, f2_, w_, g_, y_, mdim, lambda_, xreg_, kappa_, good_));
     return rcpp_result_gen;
 END_RCPP
 }
 // issfilter
-Rcpp::List issfilter(NumericVector& f0_, NumericVector& f1_, NumericVector& f2_, NumericVector& w_, NumericVector& g_, NumericVector& y_, IntegerVector& mdim, NumericVector& lambda_, NumericVector& xreg_, NumericVector& kappa_, NumericVector& xseed_);
-RcppExport SEXP _tsissm_issfilter(SEXP f0_SEXP, SEXP f1_SEXP, SEXP f2_SEXP, SEXP w_SEXP, SEXP g_SEXP, SEXP y_SEXP, SEXP mdimSEXP, SEXP lambda_SEXP, SEXP xreg_SEXP, SEXP kappa_SEXP, SEXP xseed_SEXP) {
+Rcpp::List issfilter(NumericVector& f0_, NumericVector& f1_, NumericVector& f2_, NumericVector& w_, NumericVector& g_, NumericVector& y_, IntegerVector& mdim, NumericVector& lambda_, NumericVector& xreg_, NumericVector& kappa_, NumericVector& xseed_, NumericVector& good_);
+RcppExport SEXP _tsissm_issfilter(SEXP f0_SEXP, SEXP f1_SEXP, SEXP f2_SEXP, SEXP w_SEXP, SEXP g_SEXP, SEXP y_SEXP, SEXP mdimSEXP, SEXP lambda_SEXP, SEXP xreg_SEXP, SEXP kappa_SEXP, SEXP xseed_SEXP, SEXP good_SEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -43,7 +44,8 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< NumericVector& >::type xreg_(xreg_SEXP);
     Rcpp::traits::input_parameter< NumericVector& >::type kappa_(kappa_SEXP);
     Rcpp::traits::input_parameter< NumericVector& >::type xseed_(xseed_SEXP);
-    rcpp_result_gen = Rcpp::wrap(issfilter(f0_, f1_, f2_, w_, g_, y_, mdim, lambda_, xreg_, kappa_, xseed_));
+    Rcpp::traits::input_parameter< NumericVector& >::type good_(good_SEXP);
+    rcpp_result_gen = Rcpp::wrap(issfilter(f0_, f1_, f2_, w_, g_, y_, mdim, lambda_, xreg_, kappa_, xseed_, good_));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -69,8 +71,8 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_tsissm_issestimation", (DL_FUNC) &_tsissm_issestimation, 10},
-    {"_tsissm_issfilter", (DL_FUNC) &_tsissm_issfilter, 11},
+    {"_tsissm_issestimation", (DL_FUNC) &_tsissm_issestimation, 11},
+    {"_tsissm_issfilter", (DL_FUNC) &_tsissm_issfilter, 12},
     {"_tsissm_isspredict", (DL_FUNC) &_tsissm_isspredict, 10},
     {NULL, NULL, 0}
 };

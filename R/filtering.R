@@ -13,6 +13,11 @@ tsfilter.tsissm.estimate <- function(object, y = NULL, newxreg = NULL, ...)
             return(object)
         }
     }
+    good <- rep(1, NROW(y))
+    if (any(is.na(y))) {
+        good[which(is.na(y))] <- 0
+    }
+    
     if (object$spec$xreg$include_xreg) {
         nx <- NCOL(object$spec$xreg$xreg)
         if (!is.null(newxreg)) {

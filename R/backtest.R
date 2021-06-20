@@ -1,7 +1,13 @@
 tsbacktest.tsissm.spec <- function(object, start = floor(length(object$target$y_orig)/2), end = length(object$target$y_orig),
-                                  h = 1, alpha = NULL, cores = 1, data_name = "y", save_output = FALSE,
-                                  save_dir = "~/tmp/", solver = "optim", trace = FALSE, ...)
+                                   h = 1, alpha = NULL, cores = 1, data_name = "y", save_output = FALSE,
+                                   save_dir = "~/tmp/", solver = "optim", autodiff = FALSE, trace = FALSE, ...)
 {
+    if (object$seasonal$include_seasonal & object$seasonal$seasonal_type == "regular") {
+        if (autodiff) {
+            autodiff <- FALSE
+            warning("\nautodiff only currently supported for trigonometric seasonality (switching to non autodiff)")
+        }
+    }
     if (save_output) {
         if (is.null(save_dir)) {
             stop("save_dir cannot be NULL when save.output is TRUE")
@@ -76,7 +82,7 @@ tsbacktest.tsissm.spec <- function(object, start = floor(length(object$target$y_
                                seasonal_harmonics = object$seasonal$seasonal_harmonics,
                                ar = object$arma$order[1], ma = object$arma$order[2], 
                                xreg = xreg_train, lambda = lambda, sampling = object$target$sampling)
-        mod <- try(estimate(spec, solver = solver), silent = TRUE)
+        mod <- try(estimate(spec, solver = solver, autodiff = autodiff), silent = TRUE)
         if (inherits(mod, 'try-error') | is.null(mod)) {
             if (!is.null(quantiles)) {
                 qp <- matrix(NA, ncol = length(quantiles), nrow = horizon[i])
@@ -135,5 +141,3 @@ tsbacktest.tsissm.spec <- function(object, start = floor(length(object$target$y_
     }
     return(list(prediction = b, metrics = metrics))
 }
-
-

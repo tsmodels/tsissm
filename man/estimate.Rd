@@ -7,7 +7,7 @@ Estimates a model given a specification object using maximum likelihood.
 }
 \usage{
 \method{estimate}{tsissm.spec}(object, solver = "nlminb",
-control = list(trace = 0), ...)
+control = list(trace = 0), autodiff = FALSE, ...)
 }
 \arguments{
 \item{object}{
@@ -21,6 +21,10 @@ used prior to starting the main solver.
 }
 \item{control}{
 Solver control parameters.
+}
+\item{autodiff}{
+Whether to use automatic differentiation for estimation. This makes use
+of the tsissmad package.
 }
 \item{\dots}{
 Not currently used.

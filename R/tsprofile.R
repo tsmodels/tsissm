@@ -1,13 +1,20 @@
-tsprofile.tsissm.estimate <- function(object, h = 1, nsim = 100, seed = NULL, cores = 1, trace = 0, sigma_scale = 1, solver = "solnp", ...)
+tsprofile.tsissm.estimate <- function(object, h = 1, nsim = 100, seed = NULL, cores = 1, 
+                                      trace = 0, sigma_scale = 1, solver = "solnp", autodiff = FALSE, ...)
 {
+    if (object$seasonal$include_seasonal & object$seasonal$seasonal_type == "regular") {
+        if (autodiff) {
+            autodiff <- FALSE
+            warning("\nautodiff only currently supported for trigonometric seasonality (switching to non autodiff)")
+        }
+    }
     sim <- simulate(object, seed = seed, nsim = nsim, h = length(object$spec$target$y_orig) + h, sigma_scale = sigma_scale)
-    profile <- profile_fun(sim$Simulated, object, h, cores = cores, trace = trace, solver = solver)
+    profile <- profile_fun(sim$Simulated, object, h, cores = cores, trace = trace, solver = solver, autodiff = autodiff)
     profile$sigma <- sim$sigma * sim$sigma_scale
     class(profile) <- "tsissm.profile"
     return(profile)
 }
 
-profile_fun <- function(sim, object, h, cores, trace, solver)
+profile_fun <- function(sim, object, h, cores, trace, solver, autodiff)
 {
 
     cl <- makeCluster(cores)
@@ -29,7 +36,7 @@ profile_fun <- function(sim, object, h, cores, trace, solver)
         yin <- y[1:(nrow(y) - h)]
         spec <- tsspec(object, yin, lambda = object$parmatrix[parameters == "lambda"]$optimal)
         # add try catch
-        mod <- try(estimate(spec, solver = solver), silent = TRUE)
+        mod <- try(estimate(spec, solver = solver, autodiff = autodiff), silent = TRUE)
         if (inherits(mod, 'try-error')) {
             return(list(L1 = NULL, L2 = NULL))
         }

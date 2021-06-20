@@ -10,7 +10,7 @@ Profiling of model dynamics using simulation/estimation/prediction.
 \usage{
 \method{tsprofile}{tsissm.estimate}(object, h = 1, nsim = 100,
 seed = NULL, cores = 1, trace = 0, sigma_scale = 1,
-solver = "solnp", ...)
+solver = "solnp", autodiff = FALSE, ...)
 }
 \arguments{
 \item{object}{
@@ -37,6 +37,10 @@ A scaling factor for the innovations sd.
 }
 \item{solver}{
 Choice of solver to use for the estimation of the paths.
+}
+\item{autodiff}{
+Whether to use automatic differentiation for estimation. This makes use
+of the tsissmad package.
 }
 \item{\dots}{
 Not currently used
