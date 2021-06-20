@@ -57,7 +57,7 @@ residuals.tsissm.estimate <- function(object, raw = FALSE, h = 1, cores = 1, see
                 paste0(object$spec$seasonal$seasonal_frequency[i],"{}")
             })
         }
-        model <- c(model,"[",s,"]")
+        model <- c(model,"(",s,")")
     } else {
         model <- c(model,"N")
     }
