@@ -62,6 +62,9 @@ residuals.tsissm.estimate <- function(object, raw = FALSE, h = 1, cores = 1, see
         model <- c(model,"N")
     }
     model <- c(model,"+ARMA(",object$spec$arma$order[1],",",object$spec$arma$order[2],")")
+    if (object$spec$xreg$include_xreg) {
+        model <- c(model,"+X(",NCOL(object$spec$xreg$xreg),")")
+    }
     model <- paste0(model,collapse = "")
     return(model)
 }
