@@ -77,14 +77,18 @@ summary.tsissm.estimate <- function(object, digits = 4, ...)
         colnames(printout) <- c("Parameter","Est[Value]","Lower","Upper")
         printout <- as.data.frame(printout)
         S <- try(suppressWarnings(.make_standard_errors(object)), silent = TRUE)
+        use_se <- FALSE
         if(!inherits(S,'try-error')){
             printout <- cbind(printout, S)
+            use_se <- TRUE
         }
         cat("ISSM Model:",model)
         if (object$parmatrix[parameters == "lambda"]$estimate == 0) {
             lambda_df <- as.data.frame(object$parmatrix[parameters == "lambda",c("parameters","optimal","lower","upper")])
             colnames(lambda_df) <- c("Parameter","Est[Value]","Lower","Upper")
-            lambda_df <- cbind(lambda_df, data.frame("Std. Error" = as.numeric(NaN),"t value" = as.numeric(NaN),"Pr(>|t|)" = as.numeric(NaN), check.names = FALSE))
+            if (use_se) {
+                lambda_df <- cbind(lambda_df, data.frame("Std. Error" = as.numeric(NaN),"t value" = as.numeric(NaN),"Pr(>|t|)" = as.numeric(NaN), check.names = FALSE))
+            }
             printout <- rbind(printout, lambda_df)
         }
         print(kable(printout, right = FALSE, digits = digits, row.names = FALSE, format = "simple"))

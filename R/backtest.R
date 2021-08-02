@@ -59,6 +59,16 @@ tsbacktest.tsissm.spec <- function(object, start = floor(length(object$target$y_
     } else {
         opts <- NULL
     }
+    opt <- list(...)
+    if (length(opt) > 0 & any(names(opt) == "use_hessian")) {
+        if(opt$use_hessian){
+            use_hessian <- TRUE
+        } else {
+            use_hessian <- FALSE
+        }
+    } else {
+        use_hessian <- FALSE
+    }
     b <- foreach(i = 1:length(seqdates), .packages = c("tsmethods","tsaux","xts","tsissm","data.table"), .options.snow = opts, .combine = rbind) %dopar% {
         y_train <- data[paste0("/", seqdates[i])]
         ix <- which(index(data) == seqdates[i])
@@ -82,7 +92,7 @@ tsbacktest.tsissm.spec <- function(object, start = floor(length(object$target$y_
                                seasonal_harmonics = object$seasonal$seasonal_harmonics,
                                ar = object$arma$order[1], ma = object$arma$order[2], 
                                xreg = xreg_train, lambda = lambda, sampling = object$target$sampling)
-        mod <- try(estimate(spec, solver = solver, autodiff = autodiff), silent = TRUE)
+        mod <- try(estimate(spec, solver = solver, autodiff = autodiff, use_hessian = use_hessian), silent = TRUE)
         if (inherits(mod, 'try-error') | is.null(mod)) {
             if (!is.null(quantiles)) {
                 qp <- matrix(NA, ncol = length(quantiles), nrow = horizon[i])
