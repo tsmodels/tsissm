@@ -210,3 +210,19 @@ weighted_box_test = function(x, lag = 1, type = c("Box-Pierce", "Ljung-Box", "Mo
                    p.value = PVAL, method = METHOD, data.name = DNAME),
               class = "htest")
 }
+
+
+matpower <- function(x, k)
+{
+    n <- ncol(x)
+    if (k == 0) {
+        return(diag(1, n))
+    }
+    x.k <- x
+    i <- 2
+    while (i <= k) {
+        x.k <- x.k %*% x
+        i <- i + 1
+    }
+    return(x.k)
+}

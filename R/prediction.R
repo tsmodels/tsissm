@@ -1,4 +1,4 @@
-predict.tsissm.estimate <- function(object, h = 12, newxreg = NULL, nsim = 1000, forc_dates = NULL, innov = NULL, init_states = NULL, ...)
+predict.tsissm.estimate <- function(object, h = 12, newxreg = NULL, nsim = 1000, forc_dates = NULL, innov = NULL, init_states = NULL, exact_moments = TRUE, ...)
 {
     parameters <- NULL
     if (!is.null(forc_dates)) {
@@ -70,7 +70,19 @@ predict.tsissm.estimate <- function(object, h = 12, newxreg = NULL, nsim = 1000,
                     mdim = mdim)
     date_class <- attr(object$spec$target$sampling, "date_class")
     lambda <- object$parmatrix[parameters == "lambda"]$optimal
-    ysim <- object$spec$transform$inverse(f$simulated[,-1], lambda = lambda)
+    if (exact_moments) {
+        pmoments <- tsmoments.tsissm.estimate(object, h = h, newxreg = newxreg, init_states = xseed)
+        ysim <- f$simulated[,-1,drop = FALSE]
+        for (i in 1:ncol(ysim)) {
+            ysim[,i] <- scale(ysim[,i])
+            ysim[,i] <- (ysim[,i]*sqrt(pmoments$variance[i])) + pmoments$mean[i]
+        }
+        ysim <- object$spec$transform$inverse(ysim, lambda = lambda)
+        analytic_mean <- tsmoments.tsissm.estimate(object, h = h, newxreg = newxreg, init_states = xseed, transform = TRUE)$mean
+    } else {
+        ysim <- object$spec$transform$inverse(f$simulated[,-1], lambda = lambda)
+        analytic_mean <- tsmoments.tsissm.estimate(object, h = h, newxreg = newxreg, init_states = xseed, transform = TRUE)$mean
+    }
     if (NCOL(ysim) == 1) ysim <- matrix(ysim, ncol = 1)
     colnames(ysim) <- as.character(forc_dates)
     class(ysim) <- "tsmodel.distribution"
@@ -79,8 +91,56 @@ predict.tsissm.estimate <- function(object, h = 12, newxreg = NULL, nsim = 1000,
     spec <- object$spec
     spec$parmatrix <- object$parmatrix
     zList <- list(original_series = xts(object$spec$target$y_orig, object$spec$target$index),
-                  distribution = ysim, mean = zoo(colMeans(ysim), forc_dates), h = h,
-                  spec = spec, states = states, decomp = tsdecompose(object), frequency = ifelse(is.null(object$spec$seasonal$seasonal_frequency[1]),1,object$spec$seasonal$seasonal_frequency[1]))
+                  distribution = ysim, mean = zoo(colMeans(ysim), forc_dates), 
+                  analytic_mean = zoo(analytic_mean, forc_dates), h = h,
+                  spec = spec, states = states, 
+                  decomp = tsdecompose(object),
+                  xseed = tail(object$model$states, 1),
+                  sigma = sigma.res,
+                  frequency = ifelse(is.null(object$spec$seasonal$seasonal_frequency[1]),1,object$spec$seasonal$seasonal_frequency[1]))
     class(zList) <- c("tsissm.predict","tsmodel.predict")
     return(zList)
+}
+
+
+tsmoments.tsissm.estimate <- function(object, h, newxreg = NULL, init_states = NULL, transform = FALSE, ...)
+{
+    mu <- rep(0, h)
+    sig2 <- rep(0, h)
+    sigma_r <- sd(residuals(object, raw = TRUE), na.rm = T)
+    w <- t(object$model$w)
+    Fmat <- object$model$F
+    g <- object$model$g
+    if (!is.null(init_states)) {
+        x <- t(init_states)
+    } else {
+        x <- t(tail(object$model$states,1))
+    }
+    cj <- 0
+    lambda <- object$parmatrix[parameters == "lambda"]$optimal
+    if (object$spec$xreg$include_xreg) {
+        beta <- object$parmatrix[grepl("kappa",parameters)]$optimal
+        X <- as.numeric(newxreg %*% beta)
+    } else {
+        X <- rep(0, h)
+    }
+    for (i in 1:h) {
+        Fmat_power <- matpower(Fmat,i - 1)
+        mu[i] <- w %*% (Fmat_power %*% x) + X[i]
+        if (i == 1) {
+            sig2[i] <- sigma_r^2
+        } else {
+            Fmat_power <- matpower(Fmat,i - 2)
+            cj <- cj + (w %*% (Fmat_power %*% g))^2
+            sig2[i] <- (sigma_r^2)*(1 + cj)
+        }
+        if (transform) {
+            if (lambda == 0) {
+                mu[i] <- exp(mu[i]) * (1 + sig2[i]/2)
+            } else {
+                mu[i] <- (lambda * mu[i] + 1)^(1/lambda) * (1 + (sig2[i] * (1 - lambda))/(2 * (lambda * mu[i] + 1)^2))
+            }
+        }
+    }
+    return(list(mean = mu, variance = sig2))
 }

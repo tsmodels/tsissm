@@ -1,7 +1,7 @@
 Package: tsissm
 Type: Package
 Title: Linear Innovations State Space Unobserved Components Model
-Version: 0.1.7
+Version: 0.1.8
 Authors@R: c(person("Alexios", "Galanos", role = c("aut", "cre"),
     email = "alexios@4dscape.com"),
     person("James","Nesbit",role="ctb",

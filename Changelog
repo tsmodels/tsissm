@@ -1,3 +1,8 @@
+# 2021-08-08 v0.1.8 [AG]
+- Added option for rescaling the mean and variance of the simulated prediction
+distribution by their exact moments (per the Hyndman paper). Will no also return
+the analytic_mean in the prediction object.
+
 # 2021-06-20 v0.1.7 [AG]
 - Added handling of missing values using the prediction filter step and calculation of the
 likelihood only for non missing values.

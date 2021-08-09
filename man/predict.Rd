@@ -10,7 +10,7 @@ Prediction function for class \dQuote{tsissm.estimate}.
 \usage{
 \method{predict}{tsissm.estimate}(object, h = 12, newxreg = NULL,
 nsim = 1000, forc_dates = NULL, innov = NULL,
-init_states = NULL, ...)
+init_states = NULL, exact_moments = TRUE, ...)
 }
 \arguments{
 \item{object}{
@@ -40,6 +40,10 @@ This is an optional vector of uniform innovations which will be
 translated to regular innovations using the appropriate
 distribution quantile function and model standard deviation.
 The length of this vector should be equal to nsim x horizon.
+}
+\item{exact_moments}{
+Whether to rescale the mean and variance of the simulated distribution by their 
+exact (analytic) moments. This is performed on the transformed data.
 }
 \item{\dots}{
 Not currently used
