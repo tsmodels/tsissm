@@ -55,7 +55,7 @@ tsbacktest.tsissm.spec <- function(object, start = floor(length(object$target$y_
     i <- 1
     cl <- makeCluster(cores)
     registerDoSNOW(cl)
-    clusterExport(cl, "FUN")
+    clusterExport(cl, "FUN", envir = environment())
     if (trace) {
         iterations <- length(seqdates)
         pb <- txtProgressBar(max = iterations, style = 3)
