@@ -9,9 +9,9 @@ Generates an expanding window walk forward backtest.
 }
 \usage{
 \method{tsbacktest}{tsissm.spec}(object, start = floor(length(object$target$y_orig)/2),
-end = length(object$target$y_orig), h = 1, alpha = NULL,
-cores = 1, data_name = "y", save_output = FALSE, save_dir = "~/tmp/",
-solver = "optim", autodiff = FALSE, trace = FALSE, ...)
+end = length(object$target$y_orig), h = 1, estimate_every = 1, FUN = NULL, 
+alpha = NULL, cores = 1, data_name = "y", save_output = FALSE, 
+save_dir = "~/tmp/", solver = "optim", autodiff = FALSE, trace = FALSE, ...)
 }
 \arguments{
 \item{object}{
@@ -29,6 +29,20 @@ of sample value to compare against.
 The forecast horizon. As the expanding window approaches the \dQuote{end},
 the horizon will automatically shrink to the number of available out of
 sample periods.
+}
+\item{estimate_every}{
+The number of periods at which the model is re-estimated and new predictions
+are generated (defaults to 1).
+}
+\item{FUN}{
+An optional function which is applied across all horizons for each draw (i.e.
+operating on each row of the distribution which represents a single path). For
+example, using the max function will return the distribution of the maximum
+across all horizons, whereas sum (for flow variables) would represent the 
+aggregate value distribution. The P50 of this distribution is returns and 
+aligned with the terminal horizon for each re-estimation period, and if alpha
+is not NULL, then the quantiles of this distributions with respect to the alpha
+chosen.
 }
 \item{alpha}{
 An optional numeric vector of coverage rates for which to calculate

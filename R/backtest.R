@@ -1,5 +1,5 @@
 tsbacktest.tsissm.spec <- function(object, start = floor(length(object$target$y_orig)/2), end = length(object$target$y_orig),
-                                   h = 1, alpha = NULL, cores = 1, data_name = "y", save_output = FALSE,
+                                   h = 1, estimate_every = 1, FUN = NULL, alpha = NULL, cores = 1, data_name = "y", save_output = FALSE,
                                    save_dir = "~/tmp/", solver = "optim", autodiff = FALSE, trace = FALSE, ...)
 {
     if (object$seasonal$include_seasonal & object$seasonal$seasonal_type == "regular") {
@@ -30,6 +30,10 @@ tsbacktest.tsissm.spec <- function(object, start = floor(length(object$target$y_
         warning(paste0("\nmaximum seasonal frequency > 1/2 initial data length (based on start)"))
     }
     seqdates <- index(data[paste0(start_date,"/", end_date)])
+    if (estimate_every != 1) {
+        ns <- length(seqdates)
+        seqdates <- seqdates[seq(1, ns, by = estimate_every)]
+    }
     elapsed_time <- function(idx, end_date, start_date) {
         min(h, which(end_date == idx) - which(start_date == idx))
     }
@@ -51,6 +55,7 @@ tsbacktest.tsissm.spec <- function(object, start = floor(length(object$target$y_
     i <- 1
     cl <- makeCluster(cores)
     registerDoSNOW(cl)
+    clusterExport(cl, "FUN")
     if (trace) {
         iterations <- length(seqdates)
         pb <- txtProgressBar(max = iterations, style = 3)
@@ -96,7 +101,7 @@ tsbacktest.tsissm.spec <- function(object, start = floor(length(object$target$y_
         if (inherits(mod, 'try-error') | is.null(mod)) {
             if (!is.null(quantiles)) {
                 qp <- matrix(NA, ncol = length(quantiles), nrow = horizon[i])
-                colnames(qp) <- paste0("P", round(quantiles*100))
+                colnames(qp) <- paste0("P", round(quantiles*100,1))
             }
             out <- data.table("estimation_date" = rep(seqdates[i], horizon[i]),
                               "horizon" = 1:horizon[i],
@@ -104,29 +109,49 @@ tsbacktest.tsissm.spec <- function(object, start = floor(length(object$target$y_
                               "forecast_dates" = as.character(index(y_test)),
                               "forecast" = rep(as.numeric(NA), horizon[i]), "actual" = as.numeric(y_test))
             if (!is.null(quantiles)) out <- cbind(out, qp)
+            if (!is.null(FUN)) {
+                funp <- data.table(estimation_date = seqdates[i], horizon = horizon[i], fun_P50 = as.numeric(NA), fun_actual = FUN(as.numeric(y_test)))
+                if (!is.null(quantiles)) {
+                    qp <- matrix(rep(as.numeric(NA)), length(quantiles), nrow = 1)
+                    colnames(qp) <- paste0("fun_P", round(quantiles*100,1))
+                    funp <- cbind(funp, qp)
+                }
+                out <- merge(out, funp, by = c("estimation_date","horizon"), all.x = T)
+            }
+            return(out)
+        } else {
+            p <- predict(mod, h = horizon[i], newxreg = xreg_test, forc_dates = index(y_test))
+            if (save_output) {
+                saveRDS(mod, file = paste0(save_dir,"/model_", seqdates[i], ".rds"))
+                saveRDS(p, file = paste0(save_dir,"/predict_", seqdates[i], ".rds"))
+            }
+            if (!is.null(quantiles)) {
+                qp <- apply(p$distribution, 2, quantile, quantiles)
+                if (length(quantiles) == 1) {
+                    qp <- matrix(qp, ncol = 1)
+                } else{
+                    qp <- t(qp)
+                }
+                colnames(qp) <- paste0("P", round(quantiles*100,1))
+            }
+            out <- data.table("estimation_date" = rep(seqdates[i], horizon[i]),
+                              "horizon" = 1:horizon[i],
+                              "size" = rep(nrow(y_train), horizon[i]),
+                              "forecast_dates" = as.character(index(y_test)),
+                              "forecast" = as.numeric(p$mean), "actual" = as.numeric(y_test))
+            if (!is.null(quantiles)) out <- cbind(out, qp)
+            if (!is.null(FUN)) {
+                pd <- apply(p$distribution, 1, FUN)
+                funp <- data.table(estimation_date = seqdates[i], horizon = horizon[i], fun_P50 = median(pd), fun_actual = FUN(as.numeric(y_test)))
+                if (!is.null(quantiles)) {
+                    qp <- matrix(quantile(pd, quantiles), nrow = 1)
+                    colnames(qp) <- paste0("fun_P", round(quantiles*100,1))
+                    funp <- cbind(funp, qp)
+                }
+                out <- merge(out, funp, by = c("estimation_date","horizon"), all = TRUE)
+            }
             return(out)
         }
-        p <- predict(mod, h = horizon[i], newxreg = xreg_test, forc_dates = index(y_test))
-        if (save_output) {
-            saveRDS(mod, file = paste0(save_dir,"/model_", seqdates[i], ".rds"))
-            saveRDS(p, file = paste0(save_dir,"/predict_", seqdates[i], ".rds"))
-        }
-        if (!is.null(quantiles)) {
-            qp <- apply(p$distribution, 2, quantile, quantiles)
-            if (length(quantiles) == 1) {
-                qp <- matrix(qp, ncol = 1)
-            } else{
-                qp <- t(qp)
-            }
-            colnames(qp) <- paste0("P", round(quantiles*100))
-        }
-        out <- data.table("estimation_date" = rep(seqdates[i], horizon[i]),
-                          "horizon" = 1:horizon[i],
-                          "size" = rep(nrow(y_train), horizon[i]),
-                          "forecast_dates" = as.character(index(y_test)),
-                          "forecast" = as.numeric(p$mean), "actual" = as.numeric(y_test))
-        if (!is.null(quantiles)) out <- cbind(out, qp)
-        return(out)
     }
     stopCluster(cl)
     if (trace) {
@@ -141,7 +166,7 @@ tsbacktest.tsissm.spec <- function(object, start = floor(length(object$target$y_
                        BIAS = bias(actual, forecast),
                        n = .N), by = "horizon"]
     if (!is.null(alpha)) {
-        q_names <- matrix(paste0("P", round(quantiles*100)), ncol = 2, byrow = TRUE)
+        q_names <- matrix(paste0("P", round(quantiles*100,1)), ncol = 2, byrow = TRUE)
         q <- do.call(cbind, lapply(1:length(alpha), function(i){
             z[,list(mis = mis(actual, get(q_names[i,1]), get(q_names[i,2]), alpha[i])), by = "horizon"]
         }))
