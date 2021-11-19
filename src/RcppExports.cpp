@@ -6,6 +6,11 @@
 
 using namespace Rcpp;
 
+#ifdef RCPP_USE_GLOBAL_ROSTREAM
+Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
+Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
+#endif
+
 // issestimation
 Rcpp::List issestimation(NumericVector& f0_, NumericVector& f1_, NumericVector& f2_, NumericVector& w_, NumericVector& g_, NumericVector& y_, IntegerVector& mdim, NumericVector& lambda_, NumericVector& xreg_, NumericVector& kappa_, NumericVector& good_);
 RcppExport SEXP _tsissm_issestimation(SEXP f0_SEXP, SEXP f1_SEXP, SEXP f2_SEXP, SEXP w_SEXP, SEXP g_SEXP, SEXP y_SEXP, SEXP mdimSEXP, SEXP lambda_SEXP, SEXP xreg_SEXP, SEXP kappa_SEXP, SEXP good_SEXP) {

@@ -1,7 +1,7 @@
 tsprofile.tsissm.estimate <- function(object, h = 1, nsim = 100, seed = NULL, cores = 1, 
                                       trace = 0, sigma_scale = 1, solver = "solnp", autodiff = FALSE, ...)
 {
-    if (object$seasonal$include_seasonal & object$seasonal$seasonal_type == "regular") {
+    if (object$spec$seasonal$include_seasonal & object$spec$seasonal$seasonal_type == "regular") {
         if (autodiff) {
             autodiff <- FALSE
             warning("\nautodiff only currently supported for trigonometric seasonality (switching to non autodiff)")

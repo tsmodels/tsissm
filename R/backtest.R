@@ -25,12 +25,14 @@ tsbacktest.tsissm.spec <- function(object, start = floor(length(object$target$y_
         xreg <- NULL
     }
     start_date <- index(data)[start]
+    end <- min(NROW(data), end)
     end_date <- index(data)[end - 1]
     if ((start/2) < max(object$seasonal$seasonal_frequency)) {
         warning(paste0("\nmaximum seasonal frequency > 1/2 initial data length (based on start)"))
     }
     seqdates <- index(data[paste0(start_date,"/", end_date)])
     if (estimate_every != 1) {
+        estimate_every <- max(1, as.integer(estimate_every))
         ns <- length(seqdates)
         seqdates <- seqdates[seq(1, ns, by = estimate_every)]
     }
