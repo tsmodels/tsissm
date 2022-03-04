@@ -61,7 +61,8 @@ Rcpp::List issestimation(NumericVector& f0_, NumericVector& f1_, NumericVector& 
 
             Rcpp::List output = Rcpp::List::create(Rcpp::Named("xseed") = wrap(xseed),
                                                    Rcpp::Named("condition") = 0.0,
-                                                   Rcpp::Named("loglik") = wrap(loglik));
+                                                   Rcpp::Named("loglik") = wrap(loglik),
+                                                   Rcpp::Named("fitted") = wrap(yhat));
             
             return(output);
         }

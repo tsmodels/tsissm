@@ -45,7 +45,7 @@ predict.tsissm.estimate <- function(object, h = 12, newxreg = NULL, nsim = 1000,
     }
     xseed <- tail(object$model$states, 1)
     if (!is.null(init_states)) {
-        if (length(as.vector(init_states) != ncol(xseed))) {
+        if (length(as.vector(init_states)) != ncol(xseed)) {
             stop(paste0("\ninit_states must be a vector of length ", ncol(xseed)))
         } else {
             xseed <- matrix(as.numeric(init_states), nrow = 1, ncol = ncol(xseed))
