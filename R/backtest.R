@@ -1,6 +1,6 @@
 tsbacktest.tsissm.spec <- function(object, start = floor(length(object$target$y_orig)/2), end = length(object$target$y_orig),
                                    h = 1, estimate_every = 1, FUN = NULL, alpha = NULL, cores = 1, data_name = "y", save_output = FALSE,
-                                   save_dir = "~/tmp/", solver = "optim", autodiff = FALSE, trace = FALSE, ...)
+                                   save_dir = "~/tmp/", solver = "optim", autodiff = FALSE, autoclean = FALSE, trace = FALSE, ...)
 {
     if (object$seasonal$include_seasonal & object$seasonal$seasonal_type == "regular") {
         if (autodiff) {
@@ -66,15 +66,25 @@ tsbacktest.tsissm.spec <- function(object, start = floor(length(object$target$y_
     } else {
         opts <- NULL
     }
-    opt <- list(...)
-    if (length(opt) > 0 & any(names(opt) == "use_hessian")) {
-        if(opt$use_hessian){
+    extra_args <- list(...)
+    if (length(extra_args) > 0 & any(names(extra_args) == "use_hessian")) {
+        if (extra_args$use_hessian) {
             use_hessian <- TRUE
+            extra_args$use_hessian <- NULL
         } else {
             use_hessian <- FALSE
         }
     } else {
         use_hessian <- FALSE
+    }
+    if (is.null(object$target$frequency)) {
+        if (is.null(object$seasonal$seasonal_frequency[1])) {
+            frequency <- 1
+        } else {
+            frequency <- object$seasonal$seasonal_frequency[1]
+        }
+    } else {
+        frequency <- object$target$frequency
     }
     b <- foreach(i = 1:length(seqdates), .packages = c("tsmethods","tsaux","xts","tsissm","data.table"), .options.snow = opts, .combine = rbind) %dopar% {
         y_train <- data[paste0("/", seqdates[i])]
@@ -91,6 +101,16 @@ tsbacktest.tsissm.spec <- function(object, start = floor(length(object$target$y_
             lambda <- NA
         } else {
             lambda <- object$transform$lambda
+        }
+        if (autoclean) {
+            if (is.na(lambda)) {
+                xlambda <- box_cox(lambda = NA)
+                xlambda <- attr(xlambda$transform(y_train, frequency = frequency),"lambda")
+            } else {
+                xlambda <- lambda
+            }
+            args_x <- c(list(y = y_train), list(frequency = frequency), list(lambda = xlambda), extra_args)
+            y_train <- do.call(auto_clean, args = args_x, quote = TRUE)
         }
         spec <- issm_modelspec(y_train, slope = object$slope$include_slope, slope_damped = object$slope$include_damped,
                                seasonal = object$seasonal$include_seasonal,
@@ -164,9 +184,7 @@ tsbacktest.tsissm.spec <- function(object, start = floor(length(object$target$y_
     forecast <- NULL
     z <- copy(b)
     z <- na.omit(z)
-    metrics <- z[,list(variable = data_name, MAPE = mape(actual, forecast), MSLRE = mslre(actual, forecast),
-                       BIAS = bias(actual, forecast),
-                       n = .N), by = "horizon"]
+    metrics <- z[,list(variable = data_name, MAPE = mape(actual, forecast), MSLRE = mslre(actual, forecast), BIAS = bias(actual, forecast), n = .N), by = "horizon"]
     if (!is.null(alpha)) {
         q_names <- matrix(paste0("P", round(quantiles*100,1)), ncol = 2, byrow = TRUE)
         q <- do.call(cbind, lapply(1:length(alpha), function(i){

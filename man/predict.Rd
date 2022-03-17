@@ -10,7 +10,8 @@ Prediction function for class \dQuote{tsissm.estimate}.
 \usage{
 \method{predict}{tsissm.estimate}(object, h = 12, newxreg = NULL,
 nsim = 1000, forc_dates = NULL, innov = NULL,
-init_states = NULL, exact_moments = TRUE, ...)
+init_states = NULL, exact_moments = TRUE, innov_type = "q", 
+sigma_scale = NULL, ...)
 }
 \arguments{
 \item{object}{
@@ -44,6 +45,15 @@ The length of this vector should be equal to nsim x horizon.
 \item{exact_moments}{
 Whether to rescale the mean and variance of the simulated distribution by their 
 exact (analytic) moments. This is performed on the transformed data.
+}
+\item{innov_type}{
+If \sQuote{innov} is not NULL, then this denotes the type of values passed,
+with \dQuote{q} denoting quantile probabilities (default and backwards
+compatible) and \dQuote{z} for standardized errors.
+}
+\item{sigma_scale}{
+A vector of length h denoting a scaling factor which is applied to rescale the
+standard deviation of each simulated horizon's distribution.
 }
 \item{\dots}{
 Not currently used

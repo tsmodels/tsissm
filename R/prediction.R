@@ -1,4 +1,5 @@
-predict.tsissm.estimate <- function(object, h = 12, newxreg = NULL, nsim = 1000, forc_dates = NULL, innov = NULL, init_states = NULL, exact_moments = TRUE, ...)
+predict.tsissm.estimate <- function(object, h = 12, newxreg = NULL, nsim = 1000, forc_dates = NULL, innov = NULL, init_states = NULL, 
+                                    exact_moments = TRUE, innov_type = "q", sigma_scale = NULL, ...)
 {
     parameters <- NULL
     if (!is.null(forc_dates)) {
@@ -23,25 +24,36 @@ predict.tsissm.estimate <- function(object, h = 12, newxreg = NULL, nsim = 1000,
             colnames(newxreg) <- colnames(object$spec$xreg$xreg)
         }
     }
+    if (!is.null(sigma_scale)) {
+        sigma_scale <- as.numeric(sigma_scale)
+        if (any(sigma_scale <= 0)) stop("\nsigma_scale must be strictly positive")
+        if (length(sigma_scale) == 1) sigma_scale <- rep(sigma_scale, h)
+        if (length(sigma_scale) != h) stop("\nsigma_scale must be of length h or 1 (recycled to h)")
+    }
     act <- object$spec$transform$transform(object$spec$target$y_orig, lambda = object$parmatrix[parameters == "lambda"]$optimal)
     fit <- object$spec$transform$transform(object$model$fitted, lambda = object$parmatrix[parameters == "lambda"]$optimal)
     res <- act - fit
     sigma.res <- sd(res, na.rm = TRUE)
     
-    if (is.null(innov)) {
-        E <- matrix(rnorm(h * nsim, 0, sigma.res), ncol = h, nrow = nsim)
+    if (!is.null(innov)) {
+        requiredn <- h * nsim
+        if (length(innov) != requiredn) {
+            stop("\nlength of innov must be nsim x h")
+        }
+        # check that the innovations are uniform samples (from a copula)
+        if (innov_type == "q") {
+            if (any(innov < 0 | innov > 1 )) {
+                stop("\ninnov must be >0 and <1 (uniform samples) for innov_type = 'q'")
+            }
+            if (any(innov == 0)) innov[which(innov == 0)] <- 1e-12
+            if (any(innov == 1)) innov[which(innov == 1)] <- (1 - 1e-12)
+            innov <- matrix(innov, h, nsim)
+            E <- qnorm(innov, sd = sigma.res)
+        } else {
+            E <- matrix(innov * sigma.res, h, nsim)
+        }
     } else {
-        if (length(innov) != (h * nsim)) {
-            stop("\nlength innov must be nsim x h")
-        }
-        if (any(innov == 0)) {
-            innov[which(innov == 0)] <- 1e-12
-        }
-        if ( any(innov == 1)) {
-            innov[which(innov == 1)] <- 1 - 1e-12
-        }
-        innov <- matrix(innov, h, nsim)
-        E <- qnorm(innov, sd = sigma.res)
+        E <- matrix(rnorm(h * nsim, 0, sigma.res), ncol = h, nrow = nsim)
     }
     xseed <- tail(object$model$states, 1)
     if (!is.null(init_states)) {
@@ -70,9 +82,17 @@ predict.tsissm.estimate <- function(object, h = 12, newxreg = NULL, nsim = 1000,
                     mdim = mdim)
     date_class <- attr(object$spec$target$sampling, "date_class")
     lambda <- object$parmatrix[parameters == "lambda"]$optimal
+    if (!is.null(sigma_scale)) {
+        mu <- colMeans(f$simulated[,-1,drop = FALSE])
+        ysim <- f$simulated[,-1,drop = FALSE]
+        ysim <- sweep(ysim, 2, mu, "-")
+        ysim <- sweep(ysim, 2, sigma_scale, "*")
+        ysim <- sweep(ysim, 2, mu, "+")
+    } else {
+        ysim <- f$simulated[,-1, drop = FALSE]
+    }
     if (exact_moments) {
         pmoments <- tsmoments.tsissm.estimate(object, h = h, newxreg = newxreg, init_states = xseed)
-        ysim <- f$simulated[,-1,drop = FALSE]
         for (i in 1:ncol(ysim)) {
             ysim[,i] <- scale(ysim[,i])
             ysim[,i] <- (ysim[,i]*sqrt(pmoments$variance[i])) + pmoments$mean[i]
@@ -80,7 +100,7 @@ predict.tsissm.estimate <- function(object, h = 12, newxreg = NULL, nsim = 1000,
         ysim <- object$spec$transform$inverse(ysim, lambda = lambda)
         analytic_mean <- tsmoments.tsissm.estimate(object, h = h, newxreg = newxreg, init_states = xseed, transform = TRUE)$mean
     } else {
-        ysim <- object$spec$transform$inverse(f$simulated[,-1], lambda = lambda)
+        ysim <- object$spec$transform$inverse(ysim, lambda = lambda)
         analytic_mean <- tsmoments.tsissm.estimate(object, h = h, newxreg = newxreg, init_states = xseed, transform = TRUE)$mean
     }
     if (NCOL(ysim) == 1) ysim <- matrix(ysim, ncol = 1)

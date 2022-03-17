@@ -11,7 +11,8 @@ Generates an expanding window walk forward backtest.
 \method{tsbacktest}{tsissm.spec}(object, start = floor(length(object$target$y_orig)/2),
 end = length(object$target$y_orig), h = 1, estimate_every = 1, FUN = NULL, 
 alpha = NULL, cores = 1, data_name = "y", save_output = FALSE, 
-save_dir = "~/tmp/", solver = "optim", autodiff = FALSE, trace = FALSE, ...)
+save_dir = "~/tmp/", solver = "optim", autodiff = FALSE, autoclean = FALSE, 
+trace = FALSE, ...)
 }
 \arguments{
 \item{object}{
@@ -71,6 +72,10 @@ The solver to use.
 \item{autodiff}{
 Whether to use automatic differentiation for estimation. This makes use
 of the tsissmad package.
+}
+\item{autoclean}{
+Whether to perform automatic cleaning on the training data prior to prediction
+as per the \sQuote{auto_clean} function in the tsaux package.
 }
 \item{trace}{
 Whether to show the progress bar.
