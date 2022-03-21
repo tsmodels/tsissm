@@ -83,26 +83,31 @@ predict.tsissm.estimate <- function(object, h = 12, newxreg = NULL, nsim = 1000,
     date_class <- attr(object$spec$target$sampling, "date_class")
     lambda <- object$parmatrix[parameters == "lambda"]$optimal
     if (!is.null(sigma_scale)) {
-        mu <- colMeans(f$simulated[,-1,drop = FALSE])
         ysim <- f$simulated[,-1,drop = FALSE]
+        if (exact_moments) {
+            pmoments <- tsmoments.tsissm.estimate(object, h = h, newxreg = newxreg, init_states = xseed)
+            for (i in 1:ncol(ysim)) {
+                ysim[,i] <- scale(ysim[,i])
+                ysim[,i] <- (ysim[,i]*sqrt(pmoments$variance[i])) + pmoments$mean[i]
+            }
+        }
+        mu <- colMeans(ysim)
         ysim <- sweep(ysim, 2, mu, "-")
         ysim <- sweep(ysim, 2, sigma_scale, "*")
         ysim <- sweep(ysim, 2, mu, "+")
     } else {
-        ysim <- f$simulated[,-1, drop = FALSE]
-    }
-    if (exact_moments) {
-        pmoments <- tsmoments.tsissm.estimate(object, h = h, newxreg = newxreg, init_states = xseed)
-        for (i in 1:ncol(ysim)) {
-            ysim[,i] <- scale(ysim[,i])
-            ysim[,i] <- (ysim[,i]*sqrt(pmoments$variance[i])) + pmoments$mean[i]
+        ysim <- f$simulated[,-1,drop = FALSE]
+        if (exact_moments) {
+            pmoments <- tsmoments.tsissm.estimate(object, h = h, newxreg = newxreg, init_states = xseed)
+            for (i in 1:ncol(ysim)) {
+                ysim[,i] <- scale(ysim[,i])
+                ysim[,i] <- (ysim[,i]*sqrt(pmoments$variance[i])) + pmoments$mean[i]
+            }
         }
-        ysim <- object$spec$transform$inverse(ysim, lambda = lambda)
-        analytic_mean <- tsmoments.tsissm.estimate(object, h = h, newxreg = newxreg, init_states = xseed, transform = TRUE)$mean
-    } else {
-        ysim <- object$spec$transform$inverse(ysim, lambda = lambda)
-        analytic_mean <- tsmoments.tsissm.estimate(object, h = h, newxreg = newxreg, init_states = xseed, transform = TRUE)$mean
     }
+    ysim <- object$spec$transform$inverse(ysim, lambda = lambda)
+    analytic_mean <- tsmoments.tsissm.estimate(object, h = h, newxreg = newxreg, init_states = xseed, transform = TRUE)$mean
+
     if (NCOL(ysim) == 1) ysim <- matrix(ysim, ncol = 1)
     colnames(ysim) <- as.character(forc_dates)
     class(ysim) <- "tsmodel.distribution"
