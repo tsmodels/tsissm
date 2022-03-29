@@ -78,11 +78,15 @@ tscalibrate.tsissm.spec <- function(object, start = floor(length(object$target$y
             lambda <- object$transform$lambda
         }
         if (autoclean) {
-            if (is.na(lambda)) {
-                xlambda <- box_cox(lambda = NA)
-                xlambda <- attr(xlambda$transform(y_train, frequency = frequency),"lambda")
+            if (object$transform$name == "box-cox") {
+                if (is.na(lambda)) {
+                    xlambda <- box_cox(lambda = NA)
+                    xlambda <- attr(xlambda$transform(y_train, frequency = frequency),"lambda")
+                } else {
+                    xlambda <- lambda
+                }
             } else {
-                xlambda <- lambda
+                xlambda <- 1
             }
             args_x <- c(list(y = y_train), list(frequency = frequency), list(lambda = xlambda), extra_args)
             y_train <- do.call(auto_clean, args = args_x, quote = TRUE)
@@ -92,6 +96,8 @@ tscalibrate.tsissm.spec <- function(object, start = floor(length(object$target$y
                                seasonal_frequency = object$seasonal$seasonal_frequency,
                                seasonal_type = object$seasonal$seasonal_type,
                                seasonal_harmonics = object$seasonal$seasonal_harmonics,
+                               transformation = object$transform$name, lower = object$transform$lower,
+                               upper = object$transform$upper,
                                ar = object$arma$order[1], ma = object$arma$order[2], 
                                xreg = xreg_train, lambda = lambda, sampling = object$target$sampling)
         mod <- try(estimate(spec, solver = solver, autodiff = autodiff, use_hessian = use_hessian), silent = TRUE)
@@ -103,7 +109,7 @@ tscalibrate.tsissm.spec <- function(object, start = floor(length(object$target$y
             qp <- apply(p$distribution, 2, quantile, quantiles)
             qp <- t(qp)
             colnames(qp) <- paste0("P", round(quantiles*100))
-            if (spec$transform$include_lambda) {
+            if (spec$transform$include_lambda | spec$transform$name == "logit") {
                 dist <- do.call(cbind, lapply(1:ncol(p$distribution), function(j) mod$spec$transform$transform(p$distribution[,j], lambda = mod$spec$transform$lambda)))
                 ac <- mod$spec$transform$transform(y_test, lambda = mod$spec$transform$lambda)
                 er <- unname(as.numeric(ac - colMeans(dist)))

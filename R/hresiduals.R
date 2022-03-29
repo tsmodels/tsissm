@@ -66,6 +66,7 @@ hresiduals.issm <- function(object,  h = 12, nsim = 1000, start = 1, seed = NULL
     }
     ##################################################################
     mdim = c(object$spec$dims[1], nsim, h, ncol(object$spec$xreg$xreg))
+    
     f <- isspredict(f0_ = S[list("F0")]$values,
                     f1_ = S[list("F1")]$values,
                     f2_ = S[list("F2")]$values,

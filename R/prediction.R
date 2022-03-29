@@ -160,10 +160,14 @@ tsmoments.tsissm.estimate <- function(object, h, newxreg = NULL, init_states = N
             sig2[i] <- (sigma_r^2)*(1 + cj)
         }
         if (transform) {
-            if (lambda == 0) {
-                mu[i] <- exp(mu[i]) * (1 + sig2[i]/2)
+            if (object$spec$transform$name == "box-cox") {
+                if (lambda == 0) {
+                    mu[i] <- exp(mu[i]) * (1 + sig2[i]/2)
+                } else {
+                    mu[i] <- (lambda * mu[i] + 1)^(1/lambda) * (1 + (sig2[i] * (1 - lambda))/(2 * (lambda * mu[i] + 1)^2))
+                }
             } else {
-                mu[i] <- (lambda * mu[i] + 1)^(1/lambda) * (1 + (sig2[i] * (1 - lambda))/(2 * (lambda * mu[i] + 1)^2))
+                mu[i] <- object$spec$transform$inverse(mu[i])
             }
         }
     }

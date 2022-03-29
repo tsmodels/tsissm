@@ -57,8 +57,12 @@ Rcpp::List issestimation(NumericVector& f0_, NumericVector& f1_, NumericVector& 
                 }
                 x.row(i) = arma::trans(F * x.row(i-1).t() + g * error(i));
             }
-            double loglik = ngood * std::log(lerr) - 2.0 * (lambda - 1.0) * logy;
-
+            double loglik = 0.0;
+            if (flag == 1.0) {
+                loglik = ngood * std::log(lerr);
+            } else {
+                loglik = ngood * std::log(lerr) - 2.0 * (lambda - 1.0) * logy;
+            }
             Rcpp::List output = Rcpp::List::create(Rcpp::Named("xseed") = wrap(xseed),
                                                    Rcpp::Named("condition") = 0.0,
                                                    Rcpp::Named("loglik") = wrap(loglik));
@@ -99,8 +103,12 @@ Rcpp::List issfilter(NumericVector& f0_, NumericVector& f1_, NumericVector& f2_,
             }
             x.row(i) = arma::trans(F * x.row(i-1).t() + g * error(i));
         }
-        double loglik = ngood * std::log(lerr) - 2.0 * (lambda - 1.0) * logy;
-        
+        double loglik = 0.0;
+        if (flag == 1.0) {
+            double loglik = ngood * std::log(lerr);
+        } else {
+            double loglik = ngood * std::log(lerr) - 2.0 * (lambda - 1.0) * logy;
+        }
         Rcpp::List output = Rcpp::List::create(Rcpp::Named("xseed") = wrap(xseed),
                                                Rcpp::Named("states") = wrap(x),
                                                Rcpp::Named("w") = wrap(w),

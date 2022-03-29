@@ -4,7 +4,7 @@ import("tsmethods")
 import("data.table")
 importFrom("utils", "head","tail","data","txtProgressBar","setTxtProgressBar")
 importFrom("stats", "lm", "optimize", "qnorm", "rnorm", "runif", "sd","var","Box.test", "acf", "na.pass", "pchisq", "pgamma", "qqline", "qqnorm","simulate")
-importFrom("tsaux","future_dates","sampling_frequency","box_cox","mape","mase","mslre","mis","bias","crps","auto_clean")
+importFrom("tsaux","future_dates","sampling_frequency","box_cox","mape","mase","mslre","mis","bias","crps","auto_clean","tstransform")
 importFrom("stats","median","na.omit","fitted","coef","quantile","residuals","predict","optim","nlminb","logLik","cov","cor","cov2cor","pnorm")
 importFrom("graphics","grid", "legend", "lines", "par", "plot","points","abline","axis", "axis.Date", "axis.POSIXct",
            "box", "polygon","layout","mtext","title","hist")

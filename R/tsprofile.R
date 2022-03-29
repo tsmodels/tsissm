@@ -1,5 +1,4 @@
-tsprofile.tsissm.estimate <- function(object, h = 1, nsim = 100, seed = NULL, cores = 1, 
-                                      trace = 0, sigma_scale = 1, solver = "solnp", autodiff = FALSE, ...)
+tsprofile.tsissm.estimate <- function(object, h = 1, nsim = 100, seed = NULL, cores = 1, trace = 0, sigma_scale = 1, solver = "solnp", autodiff = FALSE, ...)
 {
     if (object$spec$seasonal$include_seasonal & object$spec$seasonal$seasonal_type == "regular") {
         if (autodiff) {

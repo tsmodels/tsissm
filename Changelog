@@ -1,4 +1,7 @@
-# 2022-03-16 v0.2.1 [AG]
+# 2022-03-28 v0.2.3 [AG]
+- Added tstransform to specification allowing for logit transformation
+
+# 2022-03-16 v0.2.2 [AG]
 - Added tscalibate and enhancements to the predict function
 
 # 2021-09-03 v0.2.0 [AG]

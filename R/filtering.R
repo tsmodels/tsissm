@@ -4,13 +4,25 @@ tsfilter.tsissm.estimate <- function(object, y = NULL, newxreg = NULL, ...)
     yold <- xts(object$spec$target$y_orig, object$spec$target$index)
     ynew <- y
     exc <- which(index(ynew) %in% index(yold))
-    if (length(exc) == 0) {
-        y <- ynew
-    } else{
-        y <- ynew[-exc]
-        if (NROW(y) == 0) {
-            warning("\nno new data in y which is not already in object!")
-            return(object)
+    if (object$spec$transform$name == "logit") {
+        if (length(exc) == 0) {
+            y <- object$spec$transform$transform(ynew)
+        } else{
+            y <-  object$spec$transform$transform(ynew[-exc])
+            if (NROW(y) == 0) {
+                warning("\nno new data in y which is not already in object!")
+                return(object)
+            }
+        }
+    } else {
+        if (length(exc) == 0) {
+            y <- ynew
+        } else{
+            y <- ynew[-exc]
+            if (NROW(y) == 0) {
+                warning("\nno new data in y which is not already in object!")
+                return(object)
+            }
         }
     }
     good <- rep(1, NROW(y))
@@ -63,7 +75,11 @@ tsfilter.tsissm.estimate <- function(object, y = NULL, newxreg = NULL, ...)
                       kappa_ = S[list("kappa")]$values,
                       mdim = mdim, xseed_ = as.vector(xseed), good_ = as.numeric(good))
     # update all vectors with the y
-    object$spec$target$y_orig <- c(object$spec$target$y_orig, as.numeric(yneworig))
+    if (object$spec$transform$name == "logit") {
+        object$spec$target$y_orig <- c(object$spec$target$y_orig, object$spec$transform$inverse(as.numeric(yneworig)))
+    } else {
+        object$spec$target$y_orig <- c(object$spec$target$y_orig, as.numeric(yneworig))
+    }
     object$spec$target$index <- c(object$spec$target$index, newindex)
     object$spec$target$y <- c(object$spec$target$y, as.numeric(y))
     mdim[2] <- length(object$spec$target$y_orig)
@@ -74,7 +90,11 @@ tsfilter.tsissm.estimate <- function(object, y = NULL, newxreg = NULL, ...)
     }
     filt <- object$spec$transform$inverse(f$fitted, lambda = as.numeric(pars["lambda"]))
     filt <- filt[-1]
-    err <- as.numeric(y) - filt
+    if (object$spec$transform$name == "logit") {
+        err <- ynew - filt
+    } else {
+        err <- as.numeric(y) - filt
+    }
     object$model$fitted <- c(object$model$fitted, filt)
     object$model$states <- rbind(object$model$states, f$states[-1,,drop = FALSE])
     object$model$residuals <- c(object$model$residuals, err)

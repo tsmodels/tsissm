@@ -25,7 +25,7 @@ tsdiagnose.tsissm.estimate <- function(object, plot = FALSE, ...)
     cat("\nWeighted Ljung-Box Test [scaled residuals]")
     cat("\n------------------------------------------\n")
     df <- sum(object$spec$arma$order)
-    r <- as.numeric(na.omit(residuals(object, scaled = TRUE)))
+    r <- as.numeric(na.omit(scale(residuals(object))))
     if (sum(object$spec$arma$order) > 0 ) j = 0 else j = 1
     b1 <- weighted_box_test(r, lag = 1, type = "Ljung-Box", fitdf = 0)
     b2j <- pmax(2 * df + df - 1, 1 + df + j)

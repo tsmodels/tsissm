@@ -1,16 +1,17 @@
 \name{issm_modelspec}
 \alias{issm_modelspec}
 \title{
-Model Specification
+Model Specification for Innovations State Space model
 }
 \description{
 Specifies an issm model prior to estimation.
 }
 \usage{
-issm_modelspec(y, slope = TRUE, slope_damped = FALSE, seasonal = FALSE,
-seasonal_frequency = 1, seasonal_type = c("trigonometric", "regular"),
-seasonal_harmonics = NULL, ar = 0, ma = 0, xreg = NULL, lambda = 1,
-sampling = NULL, ...)
+issm_modelspec(y, slope = TRUE, slope_damped = FALSE, seasonal = FALSE, 
+    seasonal_frequency = 1, seasonal_type = c("trigonometric", 
+        "regular"), seasonal_harmonics = NULL, ar = 0, ma = 0, 
+    xreg = NULL, transformation = "box-cox", lambda = 1, lower = 0, 
+    upper = 1, sampling = NULL, ...)
 }
 \arguments{
 \item{y}{
@@ -45,8 +46,19 @@ The MA order.
 \item{xreg}{
 An xts matrix of external regressors.
 }
+\item{transformation}{
+A valid transformation for y from the \dQuote{tstransform} function in the
+\dQuote{tsaux} package (currently box-cox or logit are available).
+}
 \item{lambda}{
-The Box Cox lambda. If not NULL, then either a numeric value or NA denoting automatic calculation.
+The Box Cox lambda. If not NULL, then either a numeric value or NA 
+denoting automatic calculation.
+}
+\item{lower}{
+The lower bound for the transformation.
+}
+\item{upper}{
+The upper bound for the transformation.
 }
 \item{sampling}{
 (Optional) sampling frequency of the dataset. If NULL, will try to identify from the timestamps of
@@ -67,7 +79,7 @@ frequency}
 \item{slope}{A list with details about the slope state}
 \item{seasonal}{A list with details about the seasonal state}
 \item{xreg}{A list with details on the external regressors}
-\item{transform}{A list with details on the Box Cox transformation}
+\item{transform}{A list with details on the transformation}
 \item{arma}{A list with details on the ARMA state}
 \item{S}{A data.table with the vectorized state matrices}
 \item{dims}{A vector with dimensions and flags used in the estimation code}

@@ -64,9 +64,6 @@ simulate.tsissm.estimate <- function(object, nsim = 1, seed = NULL, h = NULL, ne
     sigma_res <- sd(res, na.rm = TRUE)
     
     if (bootstrap) {
-        act <- object$spec$transform$transform(object$spec$target$y_orig, lambda = object$parmatrix[parameters == "lambda"]$optimal)
-        fit <- object$spec$transform$transform(object$model$fitted, lambda = object$parmatrix[parameters == "lambda"]$optimal)
-        res <- act - fit
         res <- na.omit(res) * sigma_scale
         E <- matrix(sample(res, h * nsim, replace = TRUE), ncol = h, nrow = nsim)
     } else {

@@ -22,16 +22,18 @@ Rcpp::List isspredict(Rcpp::NumericVector& , Rcpp::NumericVector& , Rcpp::Numeri
 template<typename T>
 inline
 T
-boxcox(const T& y, const double lambda)
+boxcox(const T& y, const double lambda, const int flag)
 {
     T x(y.n_elem);
-
-    if (lambda < 1.0e-9) {
-        x = arma::log(y);
+    if (flag == 1) {
+        x = y;
     } else {
-        x = (arma::sign(y) % arma::pow(arma::abs(y), lambda) - 1.0)/lambda;
+        if (lambda < 1.0e-9) {
+            x = arma::log(y);
+        } else {
+            x = (arma::sign(y) % arma::pow(arma::abs(y), lambda) - 1.0)/lambda;
+        }
     }
-
     return(x);
 }
 
@@ -101,11 +103,12 @@ const int sstart = mdim[3];                                                     
 const int send = mdim[4];                                                                       \
 const int narma = mdim[5];                                                                      \
 const int nxreg = mdim[6];                                                                      \
+const int flag = mdim[7];                                                                       \
 const double lambda = lambda_[0];                                                               \
 arma::vec y = Rcpp::as<arma::vec>(y_);                                                          \
 arma::vec good = Rcpp::as<arma::vec>(good_);                                                    \
 arma::vec yhat = arma::zeros(time + 1);                                                         \
-arma::vec ytrans = boxcox(y, lambda);                                                           \
+arma::vec ytrans = boxcox(y, lambda, flag);                                                     \
 arma::vec error = arma::zeros<arma::vec>(time + 1);                                             \
 arma::mat F0 = arma::reshape(Rcpp::as<arma::vec>(f0_), states, states);                         \
 arma::mat F1 = arma::reshape(Rcpp::as<arma::vec>(f1_), states, states);                         \
@@ -140,11 +143,12 @@ const int sstart = mdim[3];                                                     
 const int send = mdim[4];                                                                       \
 const int narma = mdim[5];                                                                      \
 const int nxreg = mdim[6];                                                                      \
+const int flag = mdim[7];                                                                       \
 const double lambda = lambda_[0];                                                               \
 arma::vec y = Rcpp::as<arma::vec>(y_);                                                          \
 arma::vec good = Rcpp::as<arma::vec>(good_);                                                    \
 arma::vec yhat = arma::zeros(time + 1);                                                         \
-arma::vec ytrans = boxcox(y, lambda);                                                           \
+arma::vec ytrans = boxcox(y, lambda, flag);                                                     \
 arma::vec error = arma::zeros<arma::vec>(time + 1);                                             \
 arma::mat F0 = arma::reshape(Rcpp::as<arma::vec>(f0_), states, states);                         \
 arma::mat F1 = arma::reshape(Rcpp::as<arma::vec>(f1_), states, states);                         \

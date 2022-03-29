@@ -1,6 +1,7 @@
 issm_modelspec <- function(y, slope = TRUE, slope_damped = FALSE, seasonal = FALSE, seasonal_frequency = 1,
                            seasonal_type = c("trigonometric","regular"), seasonal_harmonics = NULL,
-                           ar = 0, ma = 0, xreg = NULL, lambda = 1, sampling = NULL, ...)
+                           ar = 0, ma = 0, xreg = NULL, transformation = "box-cox", lambda = 1, lower = 0, upper = 1, 
+                           sampling = NULL, ...)
 {
     if (!is.xts(y)) {
         stop("\ny is not an xts object...refusing to continue. Please fix and resubmit.")
@@ -76,21 +77,40 @@ issm_modelspec <- function(y, slope = TRUE, slope_damped = FALSE, seasonal = FAL
     spec$seasonal$seasonal_type <- match.arg(seasonal_type[1], c("trigonometric", "regular"))
     spec$xreg$include_xreg <- include_xreg
     spec$xreg$xreg <- xreg
-    if (is.null(lambda)) 
+    # 
+    transformation <- match.arg(transformation[1], c("box-cox","logit"))
+    if (transformation == "logit") {
         lambda <- 1
-    if (is.na(lambda)) {
-        include_lambda <- TRUE
-        transform <- box_cox(lambda = lambda, lower = 0, upper = 1.5)
-        tmp <- transform$transform(y = y, frequency = seasonal_frequency[1])
-        transform$lambda <- attr(tmp, "lambda")
-        transform$include_lambda <- TRUE
-        lambda <- transform$lambda
-    } else {
+        transform <- tstransform(method = transformation, lower = lower, upper = upper)
+        transform$lambda <- 1
+        transform$name <- "logit"
         include_lambda <- FALSE
-        transform <- box_cox(lambda = lambda, lower = 0, upper = 1.5)
         transform$include_lambda <- FALSE
-        transform$lambda <- lambda
-        tmp <- transform$transform(y = y, frequency = seasonal_frequency[1])
+        transform$lower <- lower
+        transform$upper <- upper
+        y <- transform$transform(y)
+        spec$target$y <- as.numeric(y)
+    } else {
+        if (is.null(lambda)) lambda <- 1
+        if (is.na(lambda)) {
+            include_lambda <- TRUE
+            transform <- tstransform(transformation, lambda = lambda, lower = lower, upper = upper)
+            tmp <- transform$transform(y = y, frequency = seasonal_frequency[1])
+            transform$lambda <- attr(tmp, "lambda")
+            transform$include_lambda <- TRUE
+            lambda <- transform$lambda
+            transform$lower <- lower
+            transform$upper <- upper
+        } else {
+            include_lambda <- FALSE
+            transform <- tstransform(transformation, lambda = lambda, lower = lower, upper = upper)
+            transform$include_lambda <- FALSE
+            transform$lambda <- lambda
+            transform$lower <- lower
+            transform$upper <- upper
+        }
+        transform$name <- "box-cox"
+        spec$target$y <- as.numeric(y)
     }
     spec$transform <- transform
     spec$arma$order <- c(ar, ma)
@@ -105,6 +125,12 @@ issm_modelspec <- function(y, slope = TRUE, slope_damped = FALSE, seasonal = FAL
     pars <- M$pars
     est <- rep(1, length(pars))
     dims <- M$dims
+    # tells the C++ estimation codes to not apply a box cox transform
+    if (transformation == "logit") {
+        dims <- c(dims, 1)
+    } else {
+        dims <- c(dims, 0)
+    }
     lower <- M$lower
     upper <- M$upper
     if (slope) {
@@ -195,6 +221,9 @@ tsspec.tsissm.estimate <- function(object, y = NULL, lambda = NULL, xreg = NULL,
                    seasonal = object$spec$seasonal$include_seasonal,
                    seasonal_frequency = object$spec$seasonal$seasonal_frequency,
                    seasonal_type = object$spec$seasonal$seasonal_type,
+                   transformation = object$spec$transform$name,
+                   lower = object$spec$transform$lower,
+                   upper = object$spec$transform$upper,
                    seasonal_harmonics = object$spec$seasonal$seasonal_harmonics,
                    ar = object$spec$arma$order[1],
                    ma = object$spec$arma$order[2],

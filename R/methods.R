@@ -83,13 +83,15 @@ summary.tsissm.estimate <- function(object, digits = 4, ...)
             use_se <- TRUE
         }
         cat("ISSM Model:",model)
-        if (object$parmatrix[parameters == "lambda"]$estimate == 0) {
-            lambda_df <- as.data.frame(object$parmatrix[parameters == "lambda",c("parameters","optimal","lower","upper")])
-            colnames(lambda_df) <- c("Parameter","Est[Value]","Lower","Upper")
-            if (use_se) {
-                lambda_df <- cbind(lambda_df, data.frame("Std. Error" = as.numeric(NaN),"t value" = as.numeric(NaN),"Pr(>|t|)" = as.numeric(NaN), check.names = FALSE))
+        if (object$spec$transform$name == "box-cox") {
+            if (object$parmatrix[parameters == "lambda"]$estimate == 0) {
+                lambda_df <- as.data.frame(object$parmatrix[parameters == "lambda",c("parameters","optimal","lower","upper")])
+                colnames(lambda_df) <- c("Parameter","Est[Value]","Lower","Upper")
+                if (use_se) {
+                    lambda_df <- cbind(lambda_df, data.frame("Std. Error" = as.numeric(NaN),"t value" = as.numeric(NaN),"Pr(>|t|)" = as.numeric(NaN), check.names = FALSE))
+                }
+                printout <- rbind(printout, lambda_df)
             }
-            printout <- rbind(printout, lambda_df)
         }
         print(kable(printout, right = FALSE, digits = digits, row.names = FALSE, format = "simple"))
         tsm <- tsmetrics(object)
@@ -97,10 +99,12 @@ summary.tsissm.estimate <- function(object, digits = 4, ...)
         printout <- object$parmatrix[estimate == 1, c("parameters","optimal","lower","upper")]
         colnames(printout) <- c("Parameter","Est[Value]","Lower","Upper")
         printout <- as.data.frame(printout)
-        if (object$parmatrix[parameters == "lambda"]$estimate == 0) {
-            lambda_df <- as.data.frame(object$parmatrix[parameters == "lambda",c("parameters","optimal","lower","upper")])
-            colnames(lambda_df) <- c("Parameter","Est[Value]","Lower","Upper")
-            printout <- rbind(printout, lambda_df)
+        if (object$spec$transform$name == "box-cox") {
+            if (object$parmatrix[parameters == "lambda"]$estimate == 0) {
+                lambda_df <- as.data.frame(object$parmatrix[parameters == "lambda",c("parameters","optimal","lower","upper")])
+                colnames(lambda_df) <- c("Parameter","Est[Value]","Lower","Upper")
+                printout <- rbind(printout, lambda_df)
+            }
         }
         cat("ISSM Model:",model)
         print(kable(printout, right = FALSE, digits = digits, row.names = FALSE, format = "simple"))
@@ -329,11 +333,15 @@ logLik.tsissm.estimate <- function(object, ...)
     parameters <- NULL
     estimate <- NULL
     np <- NROW(object$parmatrix[estimate == 1]) + ncol(object$model$xseed)
-    r <- na.omit(residuals(object, scaled = TRUE))
+    r <- na.omit(residuals(object, raw = TRUE))
     v <- sum(r^2)
     lambda <- object$parmatrix[parameters == "lambda"]$optimal
     n <- NROW(object$spec$target$y_orig[which(object$spec$good == 1)])
-    loglik <- -0.5 * n * log(2 * pi * (v/n)) - (1/(2 * (v/n))) * v + (lambda - 1) * sum(log(object$spec$target$y_orig[which(object$spec$good == 1)]))
+    if (object$spec$transform$name == "box-cox") {
+        loglik <- -0.5 * n * log(2 * pi * (v/n)) - (1/(2 * (v/n))) * v + (lambda - 1) * sum(log(object$spec$target$y_orig[which(object$spec$good == 1)]))
+    } else {
+        loglik <- -0.5 * n * log(2 * pi * (v/n)) - (1/(2 * (v/n))) * v
+    }
     return(structure(loglik, df = np + 1, class = "logLik"))
 }
 
@@ -354,9 +362,9 @@ tsmetrics.tsissm.estimate <- function(object, ...)
     MAPE <- mape(object$spec$target$y_orig, fitted(object))
     BIAS <- bias(object$spec$target$y_orig, fitted(object))
     MSLRE <- mslre(object$spec$target$y_orig, fitted(object))
-    yt <- object$spec$transform$transform(object$spec$target$y_orig, lambda = lambda)
-    ft <- object$spec$transform$transform(as.numeric(fitted(object)), lambda = lambda)
-    r <- yt - ft
+    # yt <- object$spec$transform$transform(object$spec$target$y_orig, lambda = lambda)
+    # ft <- object$spec$transform$transform(as.numeric(fitted(object)), lambda = lambda)
+    # r <- yt - ft
     cat("\ntsissm: Performance Metrics")
     cat("\n----------------------------------\n")
     cat(paste0("AIC\t: ", round(AIC,2), " (n = ", nr,")"))

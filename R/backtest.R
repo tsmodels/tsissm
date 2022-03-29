@@ -103,11 +103,15 @@ tsbacktest.tsissm.spec <- function(object, start = floor(length(object$target$y_
             lambda <- object$transform$lambda
         }
         if (autoclean) {
-            if (is.na(lambda)) {
-                xlambda <- box_cox(lambda = NA)
-                xlambda <- attr(xlambda$transform(y_train, frequency = frequency),"lambda")
+            if (object$transform$name == "box-cox") {
+                if (is.na(lambda)) {
+                    xlambda <- box_cox(lambda = NA)
+                    xlambda <- attr(xlambda$transform(y_train, frequency = frequency),"lambda")
+                } else {
+                    xlambda <- lambda
+                }
             } else {
-                xlambda <- lambda
+                xlambda <- 1
             }
             args_x <- c(list(y = y_train), list(frequency = frequency), list(lambda = xlambda), extra_args)
             y_train <- do.call(auto_clean, args = args_x, quote = TRUE)
@@ -118,7 +122,9 @@ tsbacktest.tsissm.spec <- function(object, start = floor(length(object$target$y_
                                seasonal_type = object$seasonal$seasonal_type,
                                seasonal_harmonics = object$seasonal$seasonal_harmonics,
                                ar = object$arma$order[1], ma = object$arma$order[2], 
-                               xreg = xreg_train, lambda = lambda, sampling = object$target$sampling)
+                               xreg = xreg_train, transformation = object$transform$name,
+                               lambda = lambda, lower = object$transform$lower, upper = object$transform$upper, 
+                               sampling = object$target$sampling)
         mod <- try(estimate(spec, solver = solver, autodiff = autodiff, use_hessian = use_hessian), silent = TRUE)
         if (inherits(mod, 'try-error') | is.null(mod)) {
             if (!is.null(quantiles)) {
