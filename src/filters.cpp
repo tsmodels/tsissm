@@ -105,9 +105,9 @@ Rcpp::List issfilter(NumericVector& f0_, NumericVector& f1_, NumericVector& f2_,
         }
         double loglik = 0.0;
         if (flag == 1.0) {
-            double loglik = ngood * std::log(lerr);
+            loglik = ngood * std::log(lerr);
         } else {
-            double loglik = ngood * std::log(lerr) - 2.0 * (lambda - 1.0) * logy;
+            loglik = ngood * std::log(lerr) - 2.0 * (lambda - 1.0) * logy;
         }
         Rcpp::List output = Rcpp::List::create(Rcpp::Named("xseed") = wrap(xseed),
                                                Rcpp::Named("states") = wrap(x),
