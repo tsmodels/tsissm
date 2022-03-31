@@ -1,3 +1,7 @@
+# 2022-03-30 v0.2.4 [AG]
+- Added an auto_issm function for automatic model selection (similar to auto_ets
+in the tsets package).
+
 # 2022-03-28 v0.2.3 [AG]
 - Added tstransform to specification allowing for logit transformation
 
