@@ -47,10 +47,10 @@ predict.tsissm.estimate <- function(object, h = 12, newxreg = NULL, nsim = 1000,
             }
             if (any(innov == 0)) innov[which(innov == 0)] <- 1e-12
             if (any(innov == 1)) innov[which(innov == 1)] <- (1 - 1e-12)
-            innov <- matrix(innov, h, nsim)
+            innov <- matrix(innov, nrow = nsim, ncol = h)
             E <- qnorm(innov, sd = sigma.res)
         } else {
-            E <- matrix(innov * sigma.res, h, nsim)
+            E <- matrix(innov * sigma.res, nrow = nsim, ncol = h)
         }
     } else {
         E <- matrix(rnorm(h * nsim, 0, sigma.res), ncol = h, nrow = nsim)
