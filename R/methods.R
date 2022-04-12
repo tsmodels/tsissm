@@ -78,7 +78,7 @@ summary.tsissm.estimate <- function(object, digits = 4, ...)
         printout <- as.data.frame(printout)
         S <- try(suppressWarnings(.make_standard_errors(object)), silent = TRUE)
         use_se <- FALSE
-        if(!inherits(S,'try-error')){
+        if (!inherits(S,'try-error')) {
             printout <- cbind(printout, S)
             use_se <- TRUE
         }
@@ -139,7 +139,7 @@ coef.tsissm.estimate <- function(object, ...)
     return(structure(object$parmatrix[estimate == 1]$optimal, names = object$parmatrix[estimate == 1]$parameters))
 }
 
-tsdecompose.tsissm.estimate <- function(object, ...)
+tsdecompose.tsissm.estimate <- function(object, simplify = FALSE, ...)
 {
     estimate <- NULL
     idx <- object$spec$idmatrix
@@ -155,8 +155,19 @@ tsdecompose.tsissm.estimate <- function(object, ...)
     mdim = object$spec$dims
     w <- matrix(S[list("w")]$values, nrow = mdim[1], ncol = 1)
     w_t <- t(w)
+    if (simplify) {
+        zero_matrix <- xts(rep(0, length(indx)), indx)
+        Trend <- S <- ARMA <- Irregular <- zero_matrix
+        colnames(Trend) <- "Trend"
+        colnames(S) <- "Seasonal"
+        colnames(ARMA) <- "ARMA"
+        colnames(Irregular) <- "Irregular"
+    }
+    # states includes seed (t=0) state
+    states <- states[-nrow(states), ]
     if (idx["Level","n"] > 0) {
-        Level <- xts(states[-nrow(states), idx["Level","start"]:idx["Level","end"]], indx)
+        Level <- xts(states[, idx["Level","start"]:idx["Level","end"]], indx)
+        if (simplify) Trend <- Trend + Level
     } else {
         Level <- NULL
     }
@@ -164,8 +175,9 @@ tsdecompose.tsissm.estimate <- function(object, ...)
         nstart <- idx[grepl("Slope",rnames),"start"]
         nend <- idx[grepl("Slope",rnames),"end"]
         # w.t will be either 1 (not dampening) else the dampening parameter
-        Slope <- xts(w_t[,nstart:nend] * states[-nrow(states), idx["Slope","start"]:idx["Slope","end"]], indx)
+        Slope <- xts(w_t[,nstart:nend] * states[, idx["Slope","start"]:idx["Slope","end"]], indx)
         colnames(Slope) <- "Slope"
+        if (simplify) Trend <- Trend + Slope
     } else {
         Slope <- NULL
     }
@@ -179,30 +191,36 @@ tsdecompose.tsissm.estimate <- function(object, ...)
         if (object$spec$seasonal$seasonal_type == "trigonometric") {
             K <- object$spec$seasonal$seasonal_harmonics
             for (i in 1:ns) {
-                Seasonal[,i] <- t(w_t[,nstart[i]:(nstart[i] + K[i] - 1)] %*% t(states[-nrow(states), nstart[i]:(nstart[i] + K[i] - 1)]))
+                Seasonal[,i] <- t(w_t[,nstart[i]:(nstart[i] + K[i] - 1)] %*% t(states[, nstart[i]:(nstart[i] + K[i] - 1)]))
             }
         } else {
             for (i in 1:ns) {
-                Seasonal[,i] <- t(w_t[,nstart[i]:(nstart[i] + frequency[i] - 1)] %*% t(states[-nrow(states), nstart[i]:(nstart[i] + frequency[i] - 1)]))
+                Seasonal[,i] <- t(w_t[,nstart[i]:(nstart[i] + frequency[i] - 1)] %*% t(states[, nstart[i]:(nstart[i] + frequency[i] - 1)]))
             }
         }
         Seasonal <- xts(Seasonal, indx)
+        if (simplify) S <- S + xts(rowSums(Seasonal), indx)
     } else {
-        Seasonal <- NULL
+        S <- NULL
     }
     if (idx["AR","n"] > 0) {
-        AR <- t(w_t[,idx["AR","start"]:idx["AR","end"]] %*% t(states[-nrow(states), idx["AR","start"]:idx["AR","end"]]))
+        AR <- t(w_t[,idx["AR","start"]:idx["AR","end"]] %*% t(states[, idx["AR","start"]:idx["AR","end"]]))
         AR <- xts(AR, indx)
         colnames(AR) <- paste0("AR",idx["AR","n"])
+        if (simplify) ARMA <- ARMA + AR
     } else {
         AR <- NULL
     }
     if (idx["MA","n"] > 0) {
-        MA <- t(w_t[,idx["MA","start"]:idx["MA","end"]] %*% t(states[-nrow(states), idx["MA","start"]:idx["MA","end"]]))
+        MA <- t(w_t[,idx["MA","start"]:idx["MA","end"]] %*% t(states[, idx["MA","start"]:idx["MA","end"]]))
         MA <- xts(MA, indx)
         colnames(MA) <- paste0("MA",idx["MA","n"])
+        if (simplify) ARMA <- ARMA + MA
     } else {
         MA <- NULL
+    }
+    if (idx["AR","n"] == 0 & idx["MA","n"] == 0) {
+        ARMA <- NULL
     }
     if (idx["X","n"] > 0) {
         beta <- matrix(object$parmatrix[which(grepl("kappa", object$parmatrix$parameters))]$optimal, ncol = 1)
@@ -212,12 +230,18 @@ tsdecompose.tsissm.estimate <- function(object, ...)
     } else {
         xreg <- NULL
     }
-    S <- cbind(Level, Slope, Seasonal, AR, MA, xreg)
-    return(S)
+    Irregular <- residuals(object, raw = TRUE)
+    colnames(Irregular) <- "Irregular"
+    if (simplify) {
+        decomposition <- cbind(Trend, S, ARMA, xreg, Irregular)
+    } else {
+        decomposition <- cbind(Level, Slope, Seasonal, AR, MA, xreg, Irregular)
+    }
+    return(decomposition)
 }
 
 
-tsdecompose.tsissm.predict <- function(object, ...)
+tsdecompose.tsissm.predict <- function(object, simplify = FALSE, ...)
 {
     estimate <- NULL
     idx <- object$spec$idmatrix
@@ -238,10 +262,17 @@ tsdecompose.tsissm.predict <- function(object, ...)
     k <- 1
     w <- matrix(S[list("w")]$values, nrow = mdim[1], ncol = 1)
     w_t <- t(w)
+    if (simplify) {
+        zero_matrix <- matrix(0, nrow = nsim, ncol = object$h)
+        empty_list <- list(distribution = zero_matrix, original_series = xts(rep(0, NROW(object$original_series)), index(object$original_series)))
+        Trend <- Seasonal <- ARMA <- Irregular <- empty_list
+    }
     if (idx["Level","n"] > 0) {
         Level <- do.call(rbind, lapply(1:nsim, function(i){
-            matrix(states[-1, idx["Level","start"]:idx["Level","end"], i],nrow = 1)
+            matrix(states[, idx["Level","start"]:idx["Level","end"], i],nrow = 1)
         }))
+        # start at time zero
+        Level <- Level[,1:(ncol(Level) - 1)]
         colnames(Level) <- fdates
         class(Level) <- "tsmodel.distribution"
         attr(Level, "date_class") <- date_class
@@ -249,14 +280,18 @@ tsdecompose.tsissm.predict <- function(object, ...)
         class(Level) <- "tsmodel.predict"
         L[[1]] <- Level
         k <- k + 1
+        if (simplify) {
+            Trend <- Level
+        }
     }
     if (idx["Slope","n"] > 0) {
         nstart <- idx[grepl("Slope",rnames),"start"]
         nend <- idx[grepl("Slope",rnames),"end"]
         # w.t will be either 1 (not dampening) else the dampening parameter
         Slope <- do.call(rbind, lapply(1:nsim, function(i){
-            matrix(w_t[,nstart:nend] * states[-1, idx["Slope","start"]:idx["Slope","end"], i], nrow = 1)
+            matrix(w_t[,nstart:nend] * states[, idx["Slope","start"]:idx["Slope","end"], i], nrow = 1)
         }))
+        Slope <- Slope[,1:(ncol(Slope) - 1)]
         colnames(Slope) <- fdates
         class(Slope) <- "tsmodel.distribution"
         attr(Slope, "date_class") <- date_class
@@ -264,6 +299,10 @@ tsdecompose.tsissm.predict <- function(object, ...)
         class(Slope) <- "tsmodel.predict"
         L[[k]] <- Slope
         k <- k + 1
+        if (simplify) {
+            Trend$distribution <- Trend$distribution + Slope$distribution
+            Trend$original_series <- Trend$original_series + Slope$original_series
+        }
     }
 
     if (any(idx[grepl("Seasonal",rnames),"n"] > 0)) {
@@ -275,35 +314,48 @@ tsdecompose.tsissm.predict <- function(object, ...)
             K <- object$spec$seasonal$seasonal_harmonics
             for (j in 1:ns) {
                 tmp <- do.call(rbind, lapply(1:nsim, function(i){
-                    matrix(t(w_t[,nstart[j]:(nstart[j] + K[j] - 1)] %*% t(states[-1, nstart[j]:(nstart[j] + K[j] - 1), i])), nrow = 1)
+                    matrix(t(w_t[,nstart[j]:(nstart[j] + K[j] - 1)] %*% t(states[, nstart[j]:(nstart[j] + K[j] - 1), i])), nrow = 1)
                 }))
+                tmp <- tmp[,1:(ncol(tmp) - 1)]
                 colnames(tmp) <- fdates
                 class(tmp) <- "tsmodel.distribution"
                 attr(tmp, "date_class") <- date_class
                 tmp <- list(original_series = object$decomp[,k], distribution = tmp)
                 class(tmp) <- "tsmodel.predict"
                 L[[k]] <- tmp
+                if (simplify) {
+                    Seasonal$distribution <- Seasonal$distribution + tmp$distribution
+                    Seasonal$original_series <- Seasonal$original_series + tmp$original_series
+                }
                 k <- k + 1
             }
         } else {
             for (i in 1:ns) {
                 tmp <- do.call(rbind, lapply(1:nsim, function(i){
-                    matrix(t(w_t[,nstart[j]:(nstart[j] + frequency[j] - 1)] %*% t(states[-1, nstart[j]:(nstart[j] + frequency[j] - 1), i])), nrow = 1)
+                    matrix(t(w_t[,nstart[j]:(nstart[j] + frequency[j] - 1)] %*% t(states[, nstart[j]:(nstart[j] + frequency[j] - 1), i])), nrow = 1)
                 }))
                 colnames(tmp) <- fdates
+                tmp <- tmp[,1:(ncol(tmp) - 1)]
                 class(tmp) <- "tsmodel.distribution"
                 attr(tmp, "date_class") <- date_class
                 tmp <- list(original_series = object$decomp[,k], distribution = tmp)
                 class(tmp) <- "tsmodel.predict"
                 L[[k]] <- tmp
+                if (simplify) {
+                    Seasonal$distribution <- Seasonal$distribution + tmp$distribution
+                    Seasonal$original_series <- Seasonal$original_series + tmp$original_series
+                }
                 k <- k + 1
             }
         }
+    } else {
+        Seasonal <- NULL
     }
     if (idx["AR","n"] > 0) {
         tmp <- do.call(rbind, lapply(1:nsim, function(i){
-            matrix(t(w_t[,idx["AR","start"]:idx["AR","end"]] %*% t(states[-1, idx["AR","start"]:idx["AR","end"], i])), nrow = 1)
+            matrix(t(w_t[,idx["AR","start"]:idx["AR","end"]] %*% t(states[, idx["AR","start"]:idx["AR","end"], i])), nrow = 1)
         }))
+        tmp <- tmp[,1:(ncol(tmp) - 1)]
         colnames(tmp) <- fdates
         class(tmp) <- "tsmodel.distribution"
         attr(tmp, "date_class") <- date_class
@@ -311,11 +363,16 @@ tsdecompose.tsissm.predict <- function(object, ...)
         class(tmp) <- "tsmodel.predict"
         L[[k]] <- tmp
         k <- k + 1
+        if (simplify) {
+            ARMA$distribution <- ARMA$distribution + tmp$distribution
+            ARMA$original_series <- ARMA$original_series + tmp$original_series
+        }
     }
     if (idx["MA","n"] > 0) {
         tmp <- do.call(rbind, lapply(1:nsim, function(i){
-            matrix(t(w_t[,idx["MA","start"]:idx["MA","end"]] %*% t(states[-1, idx["MA","start"]:idx["MA","end"], i])), nrow = 1)
+            matrix(t(w_t[,idx["MA","start"]:idx["MA","end"]] %*% t(states[, idx["MA","start"]:idx["MA","end"], i])), nrow = 1)
         }))
+        tmp <- tmp[,1:(ncol(tmp) - 1)]
         colnames(tmp) <- fdates
         class(tmp) <- "tsmodel.distribution"
         attr(tmp, "date_class") <- date_class
@@ -323,8 +380,28 @@ tsdecompose.tsissm.predict <- function(object, ...)
         class(tmp) <- "tsmodel.predict"
         L[[k]] <- tmp
         k <- k + 1
+        if (simplify) {
+            ARMA$distribution <- ARMA$distribution + tmp$distribution
+            ARMA$original_series <- ARMA$original_series + tmp$original_series
+        }
     }
-    names(L) <- colnames(object$decomp[,1:length(L)])
+    if (idx["AR","n"] == 0 & idx["MA","n"] == 0) {
+        ARMA <- NULL
+    }
+    # Innovations
+    Irregular <- object$innov
+    L[[k]] <- Irregular
+    names(L) <- c(colnames(object$decomp[,1:(length(L) - 1)]), "Irregular")
+    if (simplify) {
+        if (!is.null(Seasonal)) class(Seasonal) <- "tsmodel.predict"
+        if (!is.null(ARMA)) class(ARMA) <- "tsmodel.predict"
+        class(Irregular) <- "tsmodel.predict"
+        L <- list()
+        L$Trend <- Trend
+        if (!is.null(Seasonal)) L$Seasonal <- Seasonal
+        if (!is.null(ARMA)) L$ARMA <- ARMA
+        L$Irregular <- Irregular
+    }
     return(L)
 }
 

@@ -115,12 +115,20 @@ predict.tsissm.estimate <- function(object, h = 12, newxreg = NULL, nsim = 1000,
     states <- f$states
     spec <- object$spec
     spec$parmatrix <- object$parmatrix
+    
+    colnames(E) <- as.character(forc_dates)
+    attr(E, "date_class") <- date_class
+    class(E) <- "tsmodel.distribution"
+    error <- list(distribution = E, original_series = residuals(object, raw = TRUE))
+    class(error) <- "tsmodel.predict"
+
     zList <- list(original_series = xts(object$spec$target$y_orig, object$spec$target$index),
                   distribution = ysim, mean = zoo(colMeans(ysim), forc_dates), 
                   analytic_mean = zoo(analytic_mean, forc_dates), h = h,
                   spec = spec, states = states, 
                   decomp = tsdecompose(object),
-                  xseed = tail(object$model$states, 1),
+                  xseed = xseed,
+                  innov = error,
                   sigma = sigma.res,
                   frequency = ifelse(is.null(object$spec$seasonal$seasonal_frequency[1]),1,object$spec$seasonal$seasonal_frequency[1]))
     class(zList) <- c("tsissm.predict","tsmodel.predict")

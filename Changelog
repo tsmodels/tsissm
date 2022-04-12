@@ -1,3 +1,12 @@
+# 2022-04-08 v0.2.5 [AG]
+- The innovations are now returned in the tsdecompose (component decomposition)
+method for both the estimated and predicted model (in transformed space).
+- The tsdecompose method now takes additional argument simplify to return the
+standard named components Trend, Seasonal, ARMA and Irregular
+- The tsdecompose returns the components pre-lagged (including the seed state)
+so that they can be summed with the error term (Irregular) to obtain the exact
+predictive distribution (in transformed space) against each date index.
+
 # 2022-03-30 v0.2.4 [AG]
 - Added an auto_issm function for automatic model selection (similar to auto_ets
 in the tsets package).
