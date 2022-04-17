@@ -136,8 +136,10 @@ predict.tsissm.estimate <- function(object, h = 12, newxreg = NULL, nsim = 1000,
 }
 
 
-tsmoments.tsissm.estimate <- function(object, h, newxreg = NULL, init_states = NULL, transform = FALSE, ...)
+tsmoments.tsissm.estimate <- function(object, h = 1, newxreg = NULL, 
+                                      init_states = NULL, transform = FALSE, ...)
 {
+    parameters <- NULL
     mu <- rep(0, h)
     sig2 <- rep(0, h)
     sigma_r <- sd(residuals(object, raw = TRUE), na.rm = T)

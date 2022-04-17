@@ -10,8 +10,8 @@ Generates an expanding window walk forward backtest.
 \usage{
 \method{tsbacktest}{tsissm.spec}(object, start = floor(length(object$target$y_orig)/2),
 end = length(object$target$y_orig), h = 1, estimate_every = 1, FUN = NULL, 
-alpha = NULL, cores = 1, data_name = "y", save_output = FALSE, 
-save_dir = "~/tmp/", solver = "optim", autodiff = FALSE, autoclean = FALSE, 
+alpha = NULL, data_name = "y", save_output = FALSE, 
+save_dir = "~/tmp/", solver = "nlminb", autodiff = TRUE, autoclean = FALSE, 
 trace = FALSE, ...)
 }
 \arguments{
@@ -49,10 +49,6 @@ chosen.
 An optional numeric vector of coverage rates for which to calculate
 the quantiles.
 }
-\item{cores}{
-The number of cores to use for parallel estimation. The package
-makes use of the doSNOW package.
-}
 \item{data_name}{
 The name of the dataset. Useful when combining mulitple results
 together.
@@ -78,7 +74,8 @@ Whether to perform automatic cleaning on the training data prior to prediction
 as per the \sQuote{auto_clean} function in the tsaux package.
 }
 \item{trace}{
-Whether to show the progress bar.
+Whether to show the progress bar. The user is expected to have set up 
+appropriate handlers for this using the \dQuote{progressr} package.
 }
 \item{\dots}{
 Not currently used
@@ -91,6 +88,10 @@ A list with the following data.tables:
 \item metrics: a summary performance table showing metrics by
 forecast horizon (MAPE, MSLRE, BIAS and MIS if alpha was not NULL).
 }
+}
+\note{
+The function can use parallel functionality as long as the user has set up a
+\code{\link[future]{plan}} using the future package.
 }
 \author{
 Alexios Galanos

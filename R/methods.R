@@ -3,10 +3,10 @@ fitted.tsissm.estimate <- function(object, ...)
     return(xts(object$model$fitted, object$spec$target$index))
 }
 
-residuals.tsissm.estimate <- function(object, raw = FALSE, h = 1, cores = 1, seed = NULL, trace = FALSE, index_start = 1, ...)
+residuals.tsissm.estimate <- function(object, raw = FALSE, h = 1, seed = NULL, trace = FALSE, index_start = 1, ...)
 {
     if (h > 1) {
-        out <- hresiduals.tsissm.estimate(object, h = h, cores = cores, seed = seed, trace = trace, raw = raw, index_start = 1, ...)
+        out <- hresiduals.tsissm.estimate(object, h = h, seed = seed, trace = trace, raw = raw, index_start = 1, ...)
     } else {
         parameters <- NULL
         if (!raw) {
@@ -68,8 +68,10 @@ residuals.tsissm.estimate <- function(object, raw = FALSE, h = 1, cores = 1, see
     model <- paste0(model,collapse = "")
     return(model)
 }
+
 summary.tsissm.estimate <- function(object, digits = 4, ...)
 {
+    parameters <- NULL
     estimate <- NULL
     model <- .make_model_description(object)
     if (object$autodiff) {

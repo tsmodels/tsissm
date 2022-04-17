@@ -1,6 +1,6 @@
 tsbacktest.tsissm.spec <- function(object, start = floor(length(object$target$y_orig)/2), end = length(object$target$y_orig),
-                                   h = 1, estimate_every = 1, FUN = NULL, alpha = NULL, cores = 1, data_name = "y", save_output = FALSE,
-                                   save_dir = "~/tmp/", solver = "optim", autodiff = FALSE, autoclean = FALSE, trace = FALSE, ...)
+                                   h = 1, estimate_every = 1, FUN = NULL, alpha = NULL, data_name = "y", save_output = FALSE,
+                                   save_dir = "~/tmp/", solver = "nlminb", autodiff = TRUE, autoclean = FALSE, trace = FALSE, ...)
 {
     if (object$seasonal$include_seasonal & object$seasonal$seasonal_type == "regular") {
         if (autodiff) {
@@ -55,17 +55,11 @@ tsbacktest.tsissm.spec <- function(object, start = floor(length(object$target$y_
         min(h, elapsed_time(index(data), index(data)[end], seqdates[i]))
     })
     i <- 1
-    cl <- makeCluster(cores)
-    registerDoSNOW(cl)
-    clusterExport(cl, "FUN", envir = environment())
+   
     if (trace) {
-        iterations <- length(seqdates)
-        pb <- txtProgressBar(max = iterations, style = 3)
-        progress <- function(n) setTxtProgressBar(pb, n)
-        opts <- list(progress = progress)
-    } else {
-        opts <- NULL
+        prog_trace <- progressor(length(seqdates))
     }
+    
     extra_args <- list(...)
     if (length(extra_args) > 0 & any(names(extra_args) == "use_hessian")) {
         if (extra_args$use_hessian) {
@@ -86,7 +80,8 @@ tsbacktest.tsissm.spec <- function(object, start = floor(length(object$target$y_
     } else {
         frequency <- object$target$frequency
     }
-    b <- foreach(i = 1:length(seqdates), .packages = c("tsmethods","tsaux","xts","tsissm","data.table"), .options.snow = opts, .combine = rbind) %dopar% {
+    b %<-% future_lapply(1:length(seqdates), function(i) {
+        if (trace) prog_trace()
         y_train <- data[paste0("/", seqdates[i])]
         ix <- which(index(data) == seqdates[i])
         y_test <- data[(ix + 1):(ix + horizon[i])]
@@ -180,11 +175,9 @@ tsbacktest.tsissm.spec <- function(object, start = floor(length(object$target$y_
             }
             return(out)
         }
-    }
-    stopCluster(cl)
-    if (trace) {
-        close(pb)
-    }
+    }, future.packages = c("tsmethods","tsaux","xts","tsissm","data.table"), future.seed = TRUE)
+    b <- eval(b)
+    b <- rbindlist(b)
     if (is.null(data_name)) data_name <- "y"
     actual <- NULL
     forecast <- NULL

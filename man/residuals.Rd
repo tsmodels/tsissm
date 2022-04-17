@@ -9,8 +9,7 @@ Extract the residual values from an estimated model.
 }
 \usage{
 \method{residuals}{tsissm.estimate}(object, raw = FALSE,
-h = 1, cores = 1, seed = NULL, trace = FALSE,
-index_start = 1, ...)
+h = 1, seed = NULL, trace = FALSE, index_start = 1, ...)
 }
 \arguments{
 \item{object}{
@@ -24,15 +23,13 @@ The horizon (steps) ahead residuals required. The default represents the
 standard residuals whilst for h>1 these are the (1:h)-step ahead in-sample
 predicted residuals for each time point under fixed coefficients.
 }
-\item{cores}{
-The number of cores to use for h>1.
-}
 \item{seed}{
 A seed value which initializes the simulated predictive distribution from
 which the h-step ahead forecasts are made in order to calculate the residuals.
 }
 \item{trace}{
-Whether to show the progress bar.
+Whether to show the progress bar. The user is expected to have set up 
+appropriate handlers for this using the \dQuote{progressr} package.
 }
 \item{index_start}{
 The numerix index of the series from which to start the evaluation (defaults
@@ -54,6 +51,10 @@ series at multiple horizons.
 An xts vector of the model residuals for h = 1, else a data.table
 with rows representing the first prediction date and columns the
 h-ahead forecast residuals.
+}
+\note{
+The function can use parallel functionality (for h > 1) as long as the user has 
+set up a \code{\link[future]{plan}} using the future package.
 }
 \author{
 Alexios Galanos

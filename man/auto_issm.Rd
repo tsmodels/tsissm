@@ -11,7 +11,7 @@ auto_issm(y, slope = c(TRUE, FALSE), slope_damped = c(TRUE, FALSE),
 seasonal = c(TRUE, FALSE), seasonal_frequency = 1, 
 seasonal_type = "trigonometric", seasonal_harmonics = list(), 
 ar = 0:2, ma = 0:2, xreg = NULL, transformation = "box-cox", lambda = 1, 
-lower = 0, upper = 1, sampling = NULL, cores = 1, trace = FALSE, 
+lower = 0, upper = 1, sampling = NULL, trace = FALSE, 
 return_table = FALSE, solver = "nlminb", autodiff = TRUE, ...)
 }
 \arguments{
@@ -66,11 +66,9 @@ The upper bound for the transformation.
 \item{sampling}{
 The sampling frequency of the data.
 }
-\item{cores}{
-The number of cores to use for parallel processing.
-}
 \item{trace}{
-Whether to show the progress bar.
+Whether to show the progress bar. The user is expected to have set up 
+appropriate handlers for this using the \dQuote{progressr} package.
 }
 \item{return_table}{
 Whether to return the table with the enumerated options and the AIC and MAPE
@@ -101,6 +99,10 @@ estimate an alternative to the top AIC model.
 \value{
 An object of class \dQuote{tsissm.estimate} returning the best model based on
 AIC (minimum).
+}
+\note{
+The function can use parallel functionality as long as the user has set up a
+\code{\link[future]{plan}} using the future package.
 }
 \author{
 Alexios Galanos

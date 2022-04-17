@@ -9,8 +9,8 @@ Profiling of model dynamics using simulation/estimation/prediction.
 }
 \usage{
 \method{tsprofile}{tsissm.estimate}(object, h = 1, nsim = 100,
-seed = NULL, cores = 1, trace = 0, sigma_scale = 1,
-solver = "solnp", autodiff = FALSE, ...)
+seed = NULL, trace = FALSE, sigma_scale = 1,
+solver = "nlminb", autodiff = TRUE, ...)
 }
 \arguments{
 \item{object}{
@@ -26,11 +26,9 @@ The number of paths to generate.
 An object specifying if and how the random number generator should be initialized.
 See the simulate documentation for more details.
 }
-\item{cores}{
-The number of cores to use for parallel estimation of the paths.
-}
 \item{trace}{
-Whether to show a progress bar for the estimation of the paths.
+Whether to show the progress bar. The user is expected to have set up 
+appropriate handlers for this using the \dQuote{progressr} package.
 }
 \item{sigma_scale}{
 A scaling factor for the innovations sd.
@@ -58,6 +56,10 @@ returned with the distribution of the coefficients from each path estimation.
 }
 \value{
 See details above.
+}
+\note{
+The function can use parallel functionality as long as the user has set up a
+\code{\link[future]{plan}} using the future package.
 }
 \author{
 Alexios Galanos

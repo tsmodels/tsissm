@@ -28,6 +28,7 @@ issm_modelspec <- function(y, slope = TRUE, slope_damped = FALSE, seasonal = FAL
         colnames(xreg) <- paste0("reg.", 1)
         include_xreg <- FALSE
     }
+    
     spec <- list()
     spec$target$y_orig <- as.numeric(y)
     spec$target$index <- index(y)
@@ -56,6 +57,7 @@ issm_modelspec <- function(y, slope = TRUE, slope_damped = FALSE, seasonal = FAL
                 stop("\nseasonal_type must be trigonometric when seasonal.frequency is not a whole number.")
             }
         }
+        seasonal_type <- match.arg(seasonal_type[1], c("trigonometric","regular"))
         if (seasonal_type == "regular" & length(seasonal_frequency) > 1) {
             stop("\nregular seasonality currently only supports single frequency models.")
         }
@@ -69,6 +71,7 @@ issm_modelspec <- function(y, slope = TRUE, slope_damped = FALSE, seasonal = FAL
             }
         }
     } else {
+        seasonal_type <- "regular"
         seasonal_harmonics <- NULL
         seasonal_frequency <- 1
     }

@@ -1,4 +1,4 @@
-estimate.tsissm.spec <- function(object, solver = "nlminb", control = list(trace = 0), autodiff = FALSE, ...)
+estimate.tsissm.spec <- function(object, solver = "nlminb", control = list(trace = 0), autodiff = TRUE, ...)
 {
     # initialize parameters
     if (object$seasonal$include_seasonal & object$seasonal$seasonal_type == "regular") {

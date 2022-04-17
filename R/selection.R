@@ -1,7 +1,7 @@
 auto_issm <- function(y, slope = c(TRUE,FALSE), slope_damped = c(TRUE,FALSE), seasonal = c(TRUE,FALSE), 
                       seasonal_frequency = 1, seasonal_type = "trigonometric", seasonal_harmonics = list(),
                       ar = 0:2, ma = 0:2, xreg = NULL, transformation = "box-cox", lambda = 1, 
-                      lower = 0, upper = 1, sampling = NULL, cores = 1, trace = FALSE, 
+                      lower = 0, upper = 1, sampling = NULL, trace = FALSE, 
                       return_table = FALSE, solver = "nlminb", autodiff = TRUE, ...)
 {
     if (any(seasonal)) {
@@ -53,18 +53,12 @@ auto_issm <- function(y, slope = c(TRUE,FALSE), slope_damped = c(TRUE,FALSE), se
     }
     n <- NROW(args_grid)
     gnames <- colnames(args_grid)
-    # setup parallel infrastructure
-    cl <- makeCluster(cores)
-    registerDoSNOW(cl)
     if (trace) {
-        iterations <- n
-        pb <- txtProgressBar(max = iterations, style = 3)
-        progress <- function(n) setTxtProgressBar(pb, n)
-        opts <- list(progress = progress)
-    } else {
-        opts <- NULL
+        prog_trace <- progressor(n)
     }
-    b <- foreach(i = 1:n, .packages = c("tsmethods","tsaux","xts","tsissm","data.table"), .options.snow = opts, .combine = rbind) %dopar% {
+    b %<-% future_lapply(1:n, function(i) {
+        if (trace) prog_trace()
+        iter <- NULL
         spec <- issm_modelspec(y, slope = args_grid[i,"slope"], slope_damped = args_grid[i,"slope_damped"], seasonal = args_grid[i,"seasonal"], 
                                seasonal_frequency = seasonal_frequency, seasonal_harmonics = as.numeric(args_grid[i,grepl("K",gnames)]), 
                                seasonal_type = seasonal_type, ar = args_grid[i,"ar"], ma = args_grid[i,"ma"], xreg = xreg, 
@@ -76,11 +70,10 @@ auto_issm <- function(y, slope = c(TRUE,FALSE), slope_damped = c(TRUE,FALSE), se
             tab <- data.table(iter = i, AIC = AIC(mod), MAPE = mape(y, fitted(mod)))
         }
         return(tab)
-    }
-    stopCluster(cl)
-    if (trace) {
-        close(pb)
-    }
+    }, future.packages = c("tsmethods","tsaux","xts","tsissm","data.table"))
+    b <- eval(b)
+    b <- rbindlist(b)
+    iter <- NULL
     args_grid <- as.data.table(args_grid)
     args_grid[,iter := 1:.N]
     b <- merge(args_grid, b, by = "iter")

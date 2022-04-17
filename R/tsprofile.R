@@ -1,4 +1,4 @@
-tsprofile.tsissm.estimate <- function(object, h = 1, nsim = 100, seed = NULL, cores = 1, trace = 0, sigma_scale = 1, solver = "solnp", autodiff = FALSE, ...)
+tsprofile.tsissm.estimate <- function(object, h = 1, nsim = 100, seed = NULL, trace = FALSE, sigma_scale = 1, solver = "nlminb", autodiff = TRUE, ...)
 {
     if (object$spec$seasonal$include_seasonal & object$spec$seasonal$seasonal_type == "regular") {
         if (autodiff) {
@@ -7,29 +7,22 @@ tsprofile.tsissm.estimate <- function(object, h = 1, nsim = 100, seed = NULL, co
         }
     }
     sim <- simulate(object, seed = seed, nsim = nsim, h = length(object$spec$target$y_orig) + h, sigma_scale = sigma_scale)
-    profile <- profile_fun(sim$Simulated, object, h, cores = cores, trace = trace, solver = solver, autodiff = autodiff)
+    profile <- profile_fun(sim$Simulated, object, h, trace = trace, solver = solver, autodiff = autodiff)
     profile$sigma <- sim$sigma * sim$sigma_scale
     class(profile) <- "tsissm.profile"
     return(profile)
 }
 
-profile_fun <- function(sim, object, h, cores, trace, solver, autodiff)
+profile_fun <- function(sim, object, h, trace, solver, autodiff)
 {
 
-    cl <- makeCluster(cores)
-    registerDoSNOW(cl)
-    if (trace == 1) {
-        iterations <- nrow(sim)
-        pb <- txtProgressBar(max = iterations, style = 3)
-        progress <- function(n) setTxtProgressBar(pb, n)
-        opts <- list(progress = progress)
-    } else {
-        opts <- NULL
+    if (trace) {
+        prog_trace <- progressor(nrow(sim))
     }
     date_class <- attr(object$spec$target$sampling, "date_class")
     date_fun <- match.fun(paste0("as.",date_class))
-    i <- 1
-    P <- foreach(i = 1:nrow(sim), .packages = c("tsmethods","tsissm","xts","data.table"), .options.snow = opts) %dopar% {
+    prof %<-% future_lapply(1:nrow(sim), function(i) {
+        if (trace) prog_trace()
         parameters <- NULL
         y <- xts(sim[i,], date_fun(colnames(sim)))
         yin <- y[1:(nrow(y) - h)]
@@ -43,14 +36,11 @@ profile_fun <- function(sim, object, h, cores, trace, solver, autodiff)
         L1 <- data.table("Variable" = names(coef(mod)), "Value" = coef(mod), "Simulation" = i)
         L2 <- data.table("Predicted" = as.numeric(p$mean), "Actual" = as.numeric(tail(y, h)), "Simulation" = i, "Horizon" = 1:h)
         return(list(L1 = L1, L2 = L2))
-    }
-    C <- rbindlist(lapply(1:length(P), function(i) P[[i]]$L1))
-    M <- rbindlist(lapply(1:length(P), function(i) P[[i]]$L2))
+    }, future.packages = c("tsmethods","tsissm","xts","data.table"), future.seed = TRUE)
+    prof <- eval(prof)
+    C <- rbindlist(lapply(1:length(prof), function(i) prof[[i]]$L1))
+    M <- rbindlist(lapply(1:length(prof), function(i) prof[[i]]$L2))
 
-    if (trace == 1) {
-        close(pb)
-    }
-    stopCluster(cl)
     Actual <- NULL
     Predicted <- NULL
     Simulation <- NULL

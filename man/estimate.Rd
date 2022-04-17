@@ -7,7 +7,7 @@ Estimates a model given a specification object using maximum likelihood.
 }
 \usage{
 \method{estimate}{tsissm.spec}(object, solver = "nlminb",
-control = list(trace = 0), autodiff = FALSE, ...)
+control = list(trace = 0), autodiff = TRUE, ...)
 }
 \arguments{
 \item{object}{

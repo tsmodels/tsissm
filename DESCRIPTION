@@ -1,7 +1,7 @@
 Package: tsissm
 Type: Package
 Title: Linear Innovations State Space Unobserved Components Model
-Version: 0.2.5
+Version: 0.3.0
 Authors@R: c(person("Alexios", "Galanos", role = c("aut", "cre"),
     email = "alexios@4dscape.com"),
     person("James","Nesbit",role="ctb",
@@ -11,8 +11,8 @@ Authors@R: c(person("Alexios", "Galanos", role = c("aut", "cre"),
 Maintainer: alexios galanos <alexios@4dscape.com>
 Description: Unobserved Components Model using the Linear Innovation State Space representation.
 SystemRequirements: C++11, GNU make
-Depends: R (>= 3.5.0), Rcpp (>= 0.12.9), tsmethods
+Depends: R (>= 3.5.0), Rcpp (>= 0.12.9), tsmethods (>= 0.3.0) 
 LinkingTo: Rcpp (>= 0.12.9), RcppArmadillo
-Imports: methods, tsaux, zoo, xts, data.table, nloptr, Rsolnp, corpcor, bootstrap, ks, viridis, EnvStats, doSNOW, foreach, parallel, tsissmad (>= 0.1.2), knitr
+Imports: methods, tsaux, zoo, xts, data.table, nloptr, Rsolnp, corpcor, bootstrap, ks, viridis, EnvStats, future, future.apply, progressr, tsissmad (>= 0.1.2), knitr
 License: GPL-2
 Encoding: UTF-8

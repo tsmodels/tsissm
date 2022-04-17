@@ -1,3 +1,13 @@
+# 2022-04-16 v0.3.0 [AG]
+# Replaced all snow and doParallel functionality with future package. The cores
+argument is now removed from options of all functions and instead the user
+can just setup a plan via the future package which is much simpler and allows
+much more customization. This may break backwards compatibility with versions
+less than this which made use of the cores argument.
+# Bumped version to 0.3.0 across all affected packages.
+# Made solver nlminb and autodiff (TRUE) defaults across all functions.
+# Export the tsmoments method for analytical forecast moments
+
 # 2022-04-08 v0.2.5 [AG]
 - The innovations are now returned in the tsdecompose (component decomposition)
 method for both the estimated and predicted model (in transformed space).

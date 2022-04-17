@@ -1,28 +1,20 @@
 #hresiduals
-hresiduals.tsissm.estimate <- function(object, h = 12, cores = 1, seed = NULL, trace = FALSE, raw = TRUE, index_start = 1, ...)
+hresiduals.tsissm.estimate <- function(object, h = 12, seed = NULL, trace = FALSE, raw = TRUE, index_start = 1, ...)
 {
     n <- length(object$spec$target$y)
-    cl <- makeCluster(cores)
-    registerDoSNOW(cl)
-    if (trace) {
-        iterations <- n
-        pb <- txtProgressBar(max = iterations, style = 3)
-        progress <- function(n) setTxtProgressBar(pb, n)
-        opts <- list(progress = progress)
-    } else {
-        opts <- NULL
-    }
     if (index_start <= 0 | index_start >= n) stop("\nindex_start must be strictly positive and less than length of dataset.")
     i <- 0
     object$model$states <- rbind(object$model$xseed, object$model$states)
-    h_residuals <- foreach(i = index_start:(n - 1), .packages = c("tsmethods","tsissm","xts","data.table"), .options.snow = opts) %dopar% {
-        tmp <- tsissm:::hresiduals.issm(object, h = h, nsim = 2000, start = i, seed = seed, raw = raw)
+    fun <- hresiduals.issm
+    if (trace) {
+        ng <- length(index_start:(n - 1))
+        prog_trace <- progressor(ng)
+    }
+    h_residuals %<-% future_lapply(index_start:(n - 1), function(i) {
+        tmp <- fun(object, h = h, nsim = 2000, start = i, seed = seed, raw = raw)
         return(tmp)
-    }
-    if (trace == 1) {
-        close(pb)
-    }
-    stopCluster(cl)
+    }, future.packages = c("tsmethods","tsissm","xts","data.table"), future.seed = TRUE)
+    h_residuals <- eval(h_residuals)
     h_residuals <- rbindlist(h_residuals)
     h_residuals <- dcast(h_residuals, date~horizon, value.var = "error")
     return(h_residuals)
