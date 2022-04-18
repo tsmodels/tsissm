@@ -3,7 +3,7 @@
 \alias{tsmoments.tsissm.estimate}
 \title{Analytic Forecast Moments}
 \description{
-Estimates a model given a specification object using maximum likelihood.
+Analytic Forecast Moments
 }
 \usage{
 \method{tsmoments}{tsissm.estimate}(object, h = 1, newxreg = NULL, 

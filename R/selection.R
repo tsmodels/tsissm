@@ -91,5 +91,6 @@ auto_issm <- function(y, slope = c(TRUE,FALSE), slope_damped = c(TRUE,FALSE), se
     if (return_table) {
         mod$selection <- b
     }
+    class(mod) <- c(class(mod), "tsissm.select")
     return(mod)
 }
