@@ -203,7 +203,7 @@ tsdecompose.tsissm.estimate <- function(object, simplify = FALSE, ...)
         Seasonal <- xts(Seasonal, indx)
         if (simplify) S <- S + xts(rowSums(Seasonal), indx)
     } else {
-        S <- NULL
+        Seasonal <- S <- NULL
     }
     if (idx["AR","n"] > 0) {
         AR <- t(w_t[,idx["AR","start"]:idx["AR","end"]] %*% t(states[, idx["AR","start"]:idx["AR","end"]]))
