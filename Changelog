@@ -1,3 +1,7 @@
+# 2022-06-12 v0.3.1 [AG]
+# Documentation converted to Roxygen.
+# Added workflows for checking.
+
 # 2022-04-16 v0.3.0 [AG]
 # Replaced all snow and doParallel functionality with future package. The cores
 argument is now removed from options of all functions and instead the user

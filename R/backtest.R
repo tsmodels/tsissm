@@ -1,19 +1,56 @@
+#' Walk Forward Model Backtest
+#'
+#' @description Generates an expanding window walk forward backtest.
+#' @param object an object of class \dQuote{tsissm.spec}.
+#' @param start numeric data index from which to start the backtest.
+#' @param end numeric data index on which to end the backtest. The backtest will
+#' end 1 period before that date in order to have at least 1 out of sample value
+#' to compare against.
+#' @param h forecast horizon. As the expanding window approaches the \dQuote{end},
+#' the horizon will automatically shrink to the number of available out of sample
+#' periods.
+#' @param estimate_every number of periods at which the model is re-estimated
+#' and new predictions are generated (defaults to 1).
+#' @param FUN optional function which is applied across all horizons for each
+#' draw (i.e. operating on each row of the distribution which represents a
+#' single path). For example, using the max function will return the distribution
+#' of the maximum across all horizons, whereas sum (for flow variables) would
+#' represent the aggregate value distribution. The P50 of this distribution is
+#' returned and aligned with the terminal horizon for each re-estimation period,
+#' and if alpha is not NULL, then the quantiles of this distributions with
+#' respect to the coverage (alpha) chosen.
+#' @param alpha optional numeric vector of coverage rates for which to calculate
+#' the quantiles.
+#' @param solver solver to use.
+#' @param autodiff whether to use automatic differentiation for estimation.
+#' This makes use of the tsissmad package.
+#' @param autoclean whether to perform automatic cleaning on the training data
+#' prior to prediction as per the \sQuote{auto_clean} function in the tsaux package.
+#' @param trace whether to show the progress bar. The user is expected to have
+#' set up appropriate handlers for this using the \dQuote{progressr} package.
+#' @param ... additional arguments passed to the \dQuote{auto_clean} function.
+#' @return A list with the following data.tables:
+#' \itemize{
+#' \item prediction : the backtest table with forecasts and actuals
+#' \item metrics: a summary performance table showing metrics by
+#' forecast horizon (MAPE, MSLRE, BIAS and MIS if alpha was not NULL).
+#' }
+#' @note The function can use parallel functionality as long as the user has
+#' set up a \code{\link[future]{plan}} using the future package.
+#' @aliases tsbacktest
+#' @method tsbacktest tsissm.spec
+#' @rdname tsbacktest
+#' @export
+#'
+#'
 tsbacktest.tsissm.spec <- function(object, start = floor(length(object$target$y_orig)/2), end = length(object$target$y_orig),
-                                   h = 1, estimate_every = 1, FUN = NULL, alpha = NULL, data_name = "y", save_output = FALSE,
-                                   save_dir = "~/tmp/", solver = "nlminb", autodiff = TRUE, autoclean = FALSE, trace = FALSE, ...)
+                                   h = 1, estimate_every = 1, FUN = NULL, alpha = NULL, solver = "nlminb", 
+                                   autodiff = TRUE, autoclean = FALSE, trace = FALSE, ...)
 {
     if (object$seasonal$include_seasonal & object$seasonal$seasonal_type == "regular") {
         if (autodiff) {
             autodiff <- FALSE
             warning("\nautodiff only currently supported for trigonometric seasonality (switching to non autodiff)")
-        }
-    }
-    if (save_output) {
-        if (is.null(save_dir)) {
-            stop("save_dir cannot be NULL when save.output is TRUE")
-        }
-        if (!dir.exists(save_dir)) {
-            stop("save_dir does not exit. Create first and then resubmit")
         }
     }
     data <- xts(object$target$y_orig, object$target$index)
@@ -144,10 +181,6 @@ tsbacktest.tsissm.spec <- function(object, start = floor(length(object$target$y_
             return(out)
         } else {
             p <- predict(mod, h = horizon[i], newxreg = xreg_test, forc_dates = index(y_test))
-            if (save_output) {
-                saveRDS(mod, file = paste0(save_dir,"/model_", seqdates[i], ".rds"))
-                saveRDS(p, file = paste0(save_dir,"/predict_", seqdates[i], ".rds"))
-            }
             if (!is.null(quantiles)) {
                 qp <- apply(p$distribution, 2, quantile, quantiles)
                 if (length(quantiles) == 1) {

@@ -1,0 +1,25 @@
+---
+output: github_document
+---
+
+```{r, echo = FALSE}
+version <- as.vector(read.dcf('DESCRIPTION')[, 'Version'])
+version <- gsub('-', '.', version)
+```
+
+[![R-CMD-check](https://github.com/tsmodels/tsissm/workflows/R-CMD-check/badge.svg)](https://github.com/tsmodels/tsissm/actions)
+[![Last-changedate](https://img.shields.io/badge/last%20change-`r gsub('-', '--', Sys.Date())`-yellowgreen.svg)](/commits/master)
+[![packageversion](https://img.shields.io/badge/Package%20version-`r version`-orange.svg?style=flat-square)](commits/master)
+[![CRAN_Status_Badge](https://www.r-pkg.org/badges/version/tsissm)](https://cran.r-project.org/package=tsissm)
+
+
+```{r, echo = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.path = "README-"
+)
+```
+
+# tsissm
+Unobserved components model using the linear innovation state space representation.

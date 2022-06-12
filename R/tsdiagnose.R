@@ -1,3 +1,19 @@
+#' Model Diagnostics
+#'
+#' @description Creates a short summary of model based diagnostics.
+#' @param object an object of class \dQuote{tsissm.estimate}.
+#' @param plot whether to generate diagnostic plots to accompany summary.
+#' @param ... not currently used.
+#' @return A list of tables (printed out and returned invisibly) with
+#' Ljung-Box test for residual autocorrelation, parameter and model bounds
+#' diagnostics and outlier dates using the Rosner test from the
+#' \code{EnvStats} package.
+#' @aliases tsdiagnose
+#' @method tsdiagnose tsissm.estimate
+#' @rdname tsdiagnose
+#' @export
+#'
+#'
 tsdiagnose.tsissm.estimate <- function(object, plot = FALSE, ...)
 {
     if (sum(object$spec$arma$order) > 0) {

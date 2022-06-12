@@ -1,6 +1,61 @@
-issm_modelspec <- function(y, slope = TRUE, slope_damped = FALSE, seasonal = FALSE, seasonal_frequency = 1,
-                           seasonal_type = c("trigonometric","regular"), seasonal_harmonics = NULL,
-                           ar = 0, ma = 0, xreg = NULL, transformation = "box-cox", lambda = 1, lower = 0, upper = 1, 
+#' Model Specification
+#'
+#' @description Specifies an ISSM model prior to estimation.
+#' @details The specification object holds the information and data which is
+#' then passed to the maximum likelihood estimation routines.
+#' @param y an xts vector.
+#' @param slope (Logical) slope component.
+#' @param slope_damped (Logical) slope dampening component.
+#' @param seasonal (Logical) seasonal component(s).
+#' @param seasonal_frequency vector of numeric seasonal frequencies. For 
+#' trigonometric this can be fractional, but must be integer for regular 
+#' seasonality.
+#' @param seasonal_type either trigonometric or regular. The latter currently 
+#' does not allow multiple seasonality.
+#' @param seasonal_harmonics the number of harmonics per seasonal frequency for 
+#' the trigonometric type.
+#' @param ar AR order.
+#' @param ma MA order.
+#' @param xreg an xts matrix of external regressors.
+#' @param transformation a valid transformation for y from the \dQuote{tstransform} 
+#' function in the \dQuote{tsaux} package (currently box-cox or logit are available).
+#' @param lambda the Box Cox lambda. If not NULL, then either a numeric value or NA 
+#' denoting automatic calculation.
+#' @param lower lower bound for the transformation.
+#' @param upper upper bound for the transformation.
+#' @param sampling (optional) sampling frequency of the dataset. If NULL, will 
+#' try to identify from the timestamps of y. This is useful for plotting and 
+#' extending the timestamps in the prediction horizon.
+#' @param ... not used.
+#' @details The specification performs some sanity checks on the arguments provided 
+#' and sets up the required state space matrices and parameters which are used in 
+#' the estimation stage.
+#' @return An object of class \dQuote{tsissm.spec} with the following slots:\cr
+#' \item{target}{A list with original data series, the data series index and the 
+#' sampling frequency}
+#' \item{slope}{A list with details about the slope state}
+#' \item{seasonal}{A list with details about the seasonal state}
+#' \item{xreg}{A list with details on the external regressors}
+#' \item{transform}{A list with details on the transformation}
+#' \item{arma}{A list with details on the ARMA state}
+#' \item{S}{A data.table with the vectorized state matrices}
+#' \item{dims}{A vector with dimensions and flags used in the estimation code}
+#' \item{parmatrix}{A data.table of the model parameters}
+#' \item{idmatrix}{A matrix with index information on the parameters}
+#' @references De Livera, Alysha M and Hyndman, Rob J and Snyder, Ralph D, 2011, 
+#' Forecasting time series with complex seasonal patterns using exponential smoothing, 
+#' \emph{Journal of the American Statistical Association}, \bold{106(496)}, 1513--1527.
+#' @aliases issm_modelspec
+#' @rdname issm_modelspec
+#' @export
+#'
+#'
+#'
+#'
+issm_modelspec <- function(y, slope = TRUE, slope_damped = FALSE, seasonal = FALSE, 
+                           seasonal_frequency = 1, seasonal_type = c("trigonometric","regular"), 
+                           seasonal_harmonics = NULL, ar = 0, ma = 0, xreg = NULL, 
+                           transformation = "box-cox", lambda = 1, lower = 0, upper = 1, 
                            sampling = NULL, ...)
 {
     if (!is.xts(y)) {

@@ -1,3 +1,54 @@
+#' Automatic Model Selection
+#'
+#' @description Automatic model selection based on the AIC criterion.
+#' @param y an xts vector.
+#' @param slope whether to include or not the slope. Having both TRUE and FALSE 
+#' will estimate all possible combinations with and without a slope.
+#' @param slope_damped whether to include or not the slope dampening. Having 
+#' both TRUE and FALSE will estimate all possible combinations with and without 
+#' slope dampening.
+#' @param seasonal whether to include or not a seasonal component. Having both 
+#' TRUE and FALSE  will estimate all possible combinations with and without a 
+#' seasonal component.
+#' @param seasonal_frequency a vector of seasonal frequencies.
+#' @param seasonal_type The type of seasonality to include. Trigonometric is the 
+#' preferred type and the only one accepting multiple seasonal frequencies.
+#' @param seasonal_harmonics a list with slots for each seasonal frequency listing 
+#' the sequence of harmonics to test for each (see details).
+#' @param ar a vector of the ar terms to test for (see details).
+#' @param ma a vector of the ma terms to test for (see details).
+#' @param xreg an optional xts matrix of regressors (pre-lagged).
+#' @param transformation The transformation to use (defaults to box-cox and 
+#' is effectively NULL if lambda is NULL or 1).
+#' @param lambda the box-cox lambda parameter.
+#' @param lower the lower bound for the transformation.
+#' @param upper the upper bound for the transformation.
+#' @param sampling the sampling frequency of the data.
+#' @param trace whether to show the progress bar. The user is expected to have
+#' set up appropriate handlers for this using the \dQuote{progressr} package.
+#' @param return_table Whether to return the table with the enumerated options 
+#' and the AIC and MAPE for each combination of those options used.
+#' @param solver the solver to use for estimation.
+#' @param autodiff whether to use automatic differentiation
+#' (see \code{\link{estimate.tsissm.spec}}).
+#' @param ... not used.
+#' @return An object of class \dQuote{tsissm.estimate} returning the best model 
+#' based on AIC (minimum).
+#' @details The user is responsible for passing reasonable options for the options. 
+#' For instance, the harmonics must be strictly positive and less than one half 
+#' the seasonal frequency. The \code{\link{expand.grid}} function is used to 
+#' enumerate all possible combinations of the options with some sanity checks 
+#' and eliminations if testing for both seasonal and non-seasonal models, 
+#' or for the case of slope and dampening. If the user prefers to ensemble 
+#' models or use instead the MAPE criterion, the \sQuote{return_table} should 
+#' be set to TRUE and the returned table used to estimate an alternative to the 
+#' top AIC model.
+#' @note The function can use parallel functionality as long as the user has set up a
+#' \code{\link[future]{plan}} using the future package.
+#' @aliases auto_issm
+#' @rdname auto_issm
+#' @export
+#'
 auto_issm <- function(y, slope = c(TRUE,FALSE), slope_damped = c(TRUE,FALSE), seasonal = c(TRUE,FALSE), 
                       seasonal_frequency = 1, seasonal_type = "trigonometric", seasonal_harmonics = list(),
                       ar = 0:2, ma = 0:2, xreg = NULL, transformation = "box-cox", lambda = 1, 

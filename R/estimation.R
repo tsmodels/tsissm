@@ -1,3 +1,26 @@
+#' Model Estimation
+#'
+#' @description Estimates a model given a specification object using
+#' maximum likelihood.
+#' @param object an object of class \dQuote{tsissm.spec}.
+#' @param solver one of either \dQuote{solnp}, \dQuote{nlminb} or \dQuote{optim}.
+#' The latter uses the L-BFGS-B algorithm from the lbfgsb3c package. For option
+#' \dQuote{autodiff}, valid solvers are \dQuote{nlminb} and \dQuote{nloptr}.
+#' @param control solver control parameters.
+#' @param autodiff whether to use automatic differentiation for estimation.
+#' This makes use of the tsissmad package.
+#' @param ... only additional argument which can be passed when choosing autodiff
+#' is that of \dQuote{use_hessian} which tells the solver to make use of second
+#' derivatives.
+#' @details The maximum likelihood estimation for this model is described in the 
+#' online book of tsmodels.
+#' @return An object of class \dQuote{tsissm.estimate}
+#' @aliases estimate
+#' @method estimate tsissm.spec
+#' @rdname estimate
+#' @export
+#'
+#'
 estimate.tsissm.spec <- function(object, solver = "nlminb", control = list(trace = 0), autodiff = TRUE, ...)
 {
     # initialize parameters

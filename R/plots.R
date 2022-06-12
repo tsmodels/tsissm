@@ -1,3 +1,17 @@
+#' Object Plots
+#'
+#' @description Plots for objects generated from the tsissm functions.
+#' @param x an object of class \dQuote{tsissm.estimate}, \dQuote{tsissm.simulate}
+#' or \dQuote{tsissm.profile}.
+#' @param y not used.
+#' @param type type of profile plot for objects of class \dQuote{tsissm.profile}.
+#' @param ... additional arguments passed to the underlying plot function.
+#' @aliases plot
+#' @method plot tsissm.estimate
+#' @rdname plot
+#' @export
+#'
+#'
 plot.tsissm.estimate <- function(x, y = NULL, ...)
 {
     opar <- par()
@@ -29,6 +43,8 @@ plot.tsissm.estimate <- function(x, y = NULL, ...)
     suppressWarnings(par(opar))
 }
 
+#' @method plot tsissm.simulate
+#' @rdname plot
 plot.tsissm.simulate <- function(x, y = NULL, ...)
 {
     opar <- par()
@@ -53,7 +69,8 @@ plot.tsissm.simulate <- function(x, y = NULL, ...)
     suppressWarnings(par(opar))
 }
 
-
+#' @method plot tsissm.profile
+#' @rdname plot
 plot.tsissm.profile <- function(x, y = NULL, type = c("metrics", "coef"), ...)
 {
     opar <- par()

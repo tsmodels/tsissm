@@ -1,8 +1,54 @@
+#' Model Fitted Values
+#'
+#' @description Extract the fitted values from an estimated model.
+#' @param object an object of class \dQuote{tsissm.estimate}.
+#' @param ... not currently used.
+#' @aliases fitted
+#' @method fitted tsissm.estimate
+#' @rdname fitted
+#' @export
+#'
+#'
 fitted.tsissm.estimate <- function(object, ...)
 {
     return(xts(object$model$fitted, object$spec$target$index))
 }
 
+
+#' Model Residuals
+#'
+#' @description Extract the residual values from an estimated model.
+#' @param object an object of class \dQuote{tsissm.estimate}.
+#' @param raw raw residuals are the model based values which for the additive
+#' model are on the Box Cox scale, whilst for multiplicative models are equal
+#' to actual/fitted - 1.
+#' @param h the horizon (steps) ahead residuals required. The default represents
+#' the standard residuals whilst for h>1 these are the (1:h)-step ahead in-sample
+#' predicted residuals for each time point under fixed coefficients.
+#' @param seed a seed value which initializes the simulated predictive distribution
+#' from which the h-step ahead forecasts are made in order to calculate the residuals.
+#' @param trace whether to show the progress bar for the h-step ahead residuals
+#' calculation. The user is expected to have set up appropriate handlers for
+#' this using the \dQuote{progressr} package.
+#' @param index_start the numeric index of the series from which to start the 
+#' evaluation (defaults to the first data point). For very large series, one may 
+#' be interested in discarding earlier periods.
+#' @param ... not currently used.
+#' @details For h>1, this is like performing an in-sample backtest starting at
+#' time 1 with fixed coefficients. The purpose of having the matrix of h-step
+#' ahead residuals is in order to calculate the 1:h covariance matrix as well
+#' as the cross 1:h covariance matrix when ensembling series at multiple horizons.
+#' @return An xts vector of the model residuals for h = 1, else a data.table
+#' with rows representing the first prediction date and columns the h-ahead
+#' forecast residuals.
+#' @note The function can use parallel functionality (for h>1) as long as the
+#' user has set up a \code{\link[future]{plan}} using the future package.
+#' @aliases residuals
+#' @method residuals tsissm.estimate
+#' @rdname residuals
+#' @export
+#'
+#'
 residuals.tsissm.estimate <- function(object, raw = FALSE, h = 1, seed = NULL, trace = FALSE, index_start = 1, ...)
 {
     if (h > 1) {
@@ -69,6 +115,23 @@ residuals.tsissm.estimate <- function(object, raw = FALSE, h = 1, seed = NULL, t
     return(model)
 }
 
+#' Model Estimation Summary
+#'
+#' @description Summary method for class \dQuote{tsissm.estimate}
+#' @param object an object of class \dQuote{tsissm.estimate}.
+#' @param digits integer, used for number formatting. Optionally, to avoid
+#' scientific notation, set \sQuote{options(scipen=999)}.
+#' @param ... not currently used.
+#' @return A printout of the parameter summary, model type and some model metrics.
+#' When estimated using autodiff, the standard errors, t-values and p-values will
+#' also be printed. In this case, if the parameters are close to their upper or
+#' lower bounds then it is very likely that these values will be NaN.
+#' @aliases summary
+#' @method summary tsissm.estimate
+#' @rdname summary
+#' @export
+#'
+#'
 summary.tsissm.estimate <- function(object, digits = 4, ...)
 {
     parameters <- NULL
@@ -135,12 +198,54 @@ summary.tsissm.estimate <- function(object, digits = 4, ...)
     attr(v, "states") <- snames
     return(v)
 }
+
+#' Extract Model Coefficients
+#'
+#' @description Extract the estimated coefficients of a model.
+#' @param object an object of class \dQuote{tsissm.estimate}.
+#' @param ... not currently used.
+#' @return a numeric named vector.
+#' @aliases coef
+#' @method coef tsissm.estimate
+#' @rdname coef
+#' @export
+#'
+#'
 coef.tsissm.estimate <- function(object, ...)
 {
     estimate <- NULL
     return(structure(object$parmatrix[estimate == 1]$optimal, names = object$parmatrix[estimate == 1]$parameters))
 }
 
+
+#' Model Decomposition
+#'
+#' @description Decomposes the estimated model or prediction into its component
+#' parts (states).
+#' @param object an object of class \dQuote{tsissm.estimate} or \dQuote{tsissm.predict}
+#' @param simplify simplification of the returned states aggregates the level 
+#' and slope (if present) into a Trend component, all Seasonal components, all 
+#' ARMA components and the error terms into an Irregular component. This may be 
+#' useful when bagging  is carried out (assuming equal lambda in the box-cox 
+#' transform or the logit transform is used). This also simplifies the ability 
+#' to created custom overrides of the Trend and rebuilt the predictive distribution.
+#' @param ... not currently used.
+#' @return For the estimated object, returns an xts matrix of the state components  
+#' (including Irregular term). For the predicted object, a list with the simulated 
+#' state components of class \dQuote{tsmodel.predict} which includes the predictive 
+#' distribution and original (estimated) series components.
+#' @details The 1-step ahead prediction is given by the following equation:
+#' \deqn{y_{t} = x_{t-1} w + \varespsilon_{t}} 
+#' Because the decomposition pre lags the states so that the seed state is aligned 
+#' with the error term, then summing the state distribution of each component with 
+#' the returned error distribution will ensure that the exact same predicted 
+#' value matched to the correct date is returned.
+#' @aliases tsdecompose
+#' @method tsdecompose tsissm.estimate
+#' @rdname tsdecompose
+#' @export
+#'
+#'
 tsdecompose.tsissm.estimate <- function(object, simplify = FALSE, ...)
 {
     estimate <- NULL
@@ -242,7 +347,9 @@ tsdecompose.tsissm.estimate <- function(object, simplify = FALSE, ...)
     return(decomposition)
 }
 
-
+#' @method tsdecompose tsissm.predict
+#' @rdname tsdecompose
+#' @export
 tsdecompose.tsissm.predict <- function(object, simplify = FALSE, ...)
 {
     estimate <- NULL
@@ -407,6 +514,20 @@ tsdecompose.tsissm.predict <- function(object, simplify = FALSE, ...)
     return(L)
 }
 
+#' Model Log-Likelihood
+#'
+#' @description Extract the log-likelihood from an estimated model.
+#' @param object an object of class \dQuote{tsissm.estimate}.
+#' @param ... not currently used.
+#' @return Returns an object of class logLik. This is a number with at least one
+#' attribute, "df" (degrees of freedom), giving the number of (estimated)
+#' parameters in the model.
+#' @aliases logLik
+#' @method logLik tsissm.estimate
+#' @rdname logLik
+#' @export
+#'
+#'
 logLik.tsissm.estimate <- function(object, ...)
 {
     parameters <- NULL
@@ -424,6 +545,20 @@ logLik.tsissm.estimate <- function(object, ...)
     return(structure(loglik, df = np + 1, class = "logLik"))
 }
 
+#' Akaike's An Information Criterion
+#'
+#' @description Extract the AIC from an estimated model.
+#' @param object an object of class \dQuote{tsissm.estimate}.
+#' @param ... not currently used.
+#' @param k the penalty per parameter to be used; the default k = 2 is the
+#' classical AIC.
+#' @return a numeric value.
+#' @aliases AIC
+#' @method AIC tsissm.estimate
+#' @rdname AIC
+#' @export
+#'
+#'
 AIC.tsissm.estimate <- function(object, ..., k = 2)
 {
     estimate <- NULL
@@ -431,6 +566,41 @@ AIC.tsissm.estimate <- function(object, ..., k = 2)
     return(object$model$loglik + k * nr)
 }
 
+#' Performance Metrics
+#'
+#' @description Performance metrics from an estimated or predicted tsissm model.
+#' @param object an object of class \dQuote{tsissm.estimate} or \dQuote{tsissm.predict}
+#' @param actual the actual data matched to the dates of the forecasts.
+#' @param alpha the coverage level for distributional forecast metrics.
+#' @param ... not currently used.
+#' @aliases tsmetrics
+#' @method tsmetrics tsissm.predict
+#' @rdname tsmetrics
+#' @export
+#'
+#'
+tsmetrics.tsissm.predict = function(object, actual, alpha = 0.1, ...)
+{
+    n <- NCOL(object$distribution)
+    if (NROW(actual) != n) stop("\nactual length not equal to forecast length")
+    m_mape <- mape(actual, colMeans(object$distribution))
+    m_bias <- bias(actual, colMeans(object$distribution))
+    m_mslre <- mslre(actual, colMeans(object$distribution))
+    m_mase <- mase(actual, colMeans(object$distribution), object$original_series, frequency = object$frequency[1])
+    if (!is.null(alpha)) {
+        m_mis <- mis(actual, lower = apply(object$distribution, 2, quantile, alpha/2), upper = apply(object$distribution, 2, quantile, 1 - alpha/2), alpha = alpha)
+    } else {
+        m_mis <- as.numeric(NA)
+    }
+    m_crps <- crps(actual, object$distribution)
+    return(data.frame("h" = n, "MAPE" = m_mape, "MASE" = m_mase, "MSLRE" = m_mslre, "BIAS" = m_bias, "MIS" = m_mis,"CRPS" = m_crps))
+}
+
+#' @method tsmetrics tsissm.estimate
+#' @rdname tsmetrics
+#' @export
+#'
+#'
 tsmetrics.tsissm.estimate <- function(object, ...)
 {
     parameters <- NULL
@@ -458,20 +628,5 @@ tsmetrics.tsissm.estimate <- function(object, ...)
     return(invisible(metrics))
 }
 
-tsmetrics.tsissm.predict = function(object, actual, alpha = 0.1, ...)
-{
-    n <- NCOL(object$distribution)
-    if (NROW(actual) != n) stop("\nactual length not equal to forecast length")
-    m_mape <- mape(actual, colMeans(object$distribution))
-    m_bias <- bias(actual, colMeans(object$distribution))
-    m_mslre <- mslre(actual, colMeans(object$distribution))
-    m_mase <- mase(actual, colMeans(object$distribution), object$original_series, frequency = object$frequency[1])
-    if (!is.null(alpha)) {
-        m_mis <- mis(actual, lower = apply(object$distribution, 2, quantile, alpha/2), upper = apply(object$distribution, 2, quantile, 1 - alpha/2), alpha = alpha)
-    } else {
-        m_mis <- as.numeric(NA)
-    }
-    m_crps <- crps(actual, object$distribution)
-    return(data.frame("h" = n, "MAPE" = m_mape, "MASE" = m_mase, "MSLRE" = m_mslre, "BIAS" = m_bias, "MIS" = m_mis,"CRPS" = m_crps))
-}
+
 
