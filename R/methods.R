@@ -19,9 +19,8 @@ fitted.tsissm.estimate <- function(object, ...)
 #'
 #' @description Extract the residual values from an estimated model.
 #' @param object an object of class \dQuote{tsissm.estimate}.
-#' @param raw raw residuals are the model based values which for the additive
-#' model are on the Box Cox scale, whilst for multiplicative models are equal
-#' to actual/fitted - 1.
+#' @param raw raw residuals are the model based values in transformed space 
+#' (when either Box Cox or Logistic have been used as transformatiions).
 #' @param h the horizon (steps) ahead residuals required. The default represents
 #' the standard residuals whilst for h>1 these are the (1:h)-step ahead in-sample
 #' predicted residuals for each time point under fixed coefficients.
