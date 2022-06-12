@@ -253,6 +253,26 @@ issm_init_pars <- function(lambda, frequency)
         data.table(variable = "lambda", value = lambda, scale = 0.001))
 }
 
+#' Model Specification Extractor
+#'
+#' @description Extracts a model specification (class \dQuote{tsissm.spec}) from
+#' an object of class \dQuote{tsissm.estimate}.
+#' @param object an object of class \dQuote{tsissm.estimate}.
+#' @param y an optional new xts vector.
+#' @param lambda an optional lambda parameter for the Box Cox transformation (if
+#' previously used).
+#' @param xreg an optional matrix of regressors.
+#' @param ... not currently used.
+#' @note This function is used by other functions in the package such as the
+#' backtest which requires rebuilding the specification for each re-estimation
+#' step with updated data but keeping all else equal.
+#' @return An object of class \dQuote{tsissm.spec}.
+#' @aliases tsspec
+#' @method tsspec tsissm.estimate
+#' @rdname tsspec
+#' @export
+#'
+#'
 tsspec.tsissm.estimate <- function(object, y = NULL, lambda = NULL, xreg = NULL, ...)
 {
     if (is.null(y)) {
