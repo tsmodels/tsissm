@@ -16,5 +16,5 @@ LinkingTo: Rcpp (>= 0.12.9), RcppArmadillo
 Imports: methods, tsaux, zoo, xts, data.table, nloptr, Rsolnp, corpcor, bootstrap, ks, viridis, EnvStats, future, future.apply, progressr, tsissmad (>= 0.1.2), knitr
 License: GPL-2 | file LICENSE
 Encoding: UTF-8
-Remotes: tsmodels/tsaux, tsmodels/tsissmad
+Remotes: tsmodels/tsmethods, tsmodels/tsaux, tsmodels/tsissmad
 RoxygenNote: 7.2.0
