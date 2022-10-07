@@ -45,6 +45,7 @@ plot.tsissm.estimate <- function(x, y = NULL, ...)
 
 #' @method plot tsissm.simulate
 #' @rdname plot
+#' @export
 plot.tsissm.simulate <- function(x, y = NULL, ...)
 {
     opar <- par()
@@ -71,6 +72,7 @@ plot.tsissm.simulate <- function(x, y = NULL, ...)
 
 #' @method plot tsissm.profile
 #' @rdname plot
+#' @export
 plot.tsissm.profile <- function(x, y = NULL, type = c("metrics", "coef"), ...)
 {
     opar <- par()
