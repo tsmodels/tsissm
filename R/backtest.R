@@ -211,7 +211,7 @@ tsbacktest.tsissm.spec <- function(object, start = floor(length(object$target$y_
     }, future.packages = c("tsmethods","tsaux","xts","tsissm","data.table"), future.seed = TRUE)
     b <- eval(b)
     b <- rbindlist(b)
-    if (is.null(data_name)) data_name <- "y"
+    data_name <- "y"
     actual <- NULL
     forecast <- NULL
     z <- copy(b)
