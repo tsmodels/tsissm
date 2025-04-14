@@ -3,26 +3,40 @@
 \name{predict.tsissm.estimate}
 \alias{predict.tsissm.estimate}
 \alias{predict}
+\alias{predict.tsissm.selection}
 \title{Model Prediction}
 \usage{
 \method{predict}{tsissm.estimate}(
   object,
   h = 12,
+  seed = NULL,
   newxreg = NULL,
   nsim = 1000,
   forc_dates = NULL,
   innov = NULL,
   innov_type = "q",
   init_states = NULL,
-  exact_moments = TRUE,
-  sigma_scale = NULL,
+  ...
+)
+
+\method{predict}{tsissm.selection}(
+  object,
+  h = 12,
+  newxreg = NULL,
+  nsim = 1000,
+  forc_dates = NULL,
+  init_states = NULL,
   ...
 )
 }
 \arguments{
-\item{object}{an object of class \dQuote{tsissm.estimate}.}
+\item{object}{an object of class \dQuote{tsissm.estimate} or \dQuote{tsissm.selection}.}
 
 \item{h}{the forecast horizon.}
+
+\item{seed}{an object specifying if and how the random number generator should be
+initialized (\sQuote{seeded}). Either NULL or an integer that will be used in
+a call to set.seed before simulating the response vectors.}
 
 \item{newxreg}{a matrix of external regressors in the forecast horizon.}
 
@@ -33,25 +47,16 @@ predictive distribution.}
 use the implied periodicity of the data to generate a regular sequence of
 dates after the last available date in the data.}
 
-\item{innov}{an optional vector of uniform innovations which will be translated
-to regular innovations using the appropriate distribution quantile function
-and model standard deviation. The length of this vector should be equal to
-nsim x horizon.}
+\item{innov}{an optional vector of innovations (see innov_type). 
+The length of this vector should be equal to nsim x horizon.}
 
 \item{innov_type}{if \sQuote{innov} is not NULL, then this denotes the type of values
 passed, with \dQuote{q} denoting quantile probabilities (default and
 backwards compatible) and \dQuote{z} for standardized errors.}
 
-\item{init_states}{an optional vector of states to initialize the forecast.
-If NULL, will use the last available state from the estimated model.}
-
-\item{exact_moments}{whether to rescale the mean and variance of the simulated 
-distribution by their exact (analytic) moments. This is performed on the 
-transformed data.}
-
-\item{sigma_scale}{a vector of length h denoting a scaling factor which is
-applied to rescale the standard deviation of each simulated horizon's
-distribution.}
+\item{init_states}{an optional vector of states to initialize the forecast
+and override the initial state vector. If NULL, will use the last available 
+state from the estimated model.}
 
 \item{...}{not currently used.}
 }
@@ -60,12 +65,16 @@ An object of class \dQuote{tsissm.predict} which also inherits
 \dQuote{tsmodel.predict}, with slots for the simulated prediction distribution,
 the original series (as a zoo object), the original specification object and
 the mean forecast. The predictive distribution is back transformed if lambda was
-not set to NULL in the specification.
+not set to NULL in the specification. If the input class is \dQuote{tsissm.selection}
+then the returned class with be \dQuote{tsissm.selection_predict} which hold the
+list of predicted objects. For this dispatch method, custom innovations are not allowed
+since correlated innovations are passed to each model predicted (using a Normal Copula)
+in order to enable ensembling of the simulated predictive distributions.
 }
 \description{
-Prediction function for class \dQuote{tsissm.estimate}.
+Prediction function for class \dQuote{tsissm.estimate} or \dQuote{tsissm.selection}.
 }
 \details{
-Like all models in the ts framework, prediction is done by
+Like all models in the tsmodels framework, prediction is done by
 simulating h-steps ahead in order to build a predictive distribution.
 }

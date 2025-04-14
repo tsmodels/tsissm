@@ -5,7 +5,14 @@
 \alias{tsspec}
 \title{Model Specification Extractor}
 \usage{
-\method{tsspec}{tsissm.estimate}(object, y = NULL, lambda = NULL, xreg = NULL, ...)
+\method{tsspec}{tsissm.estimate}(
+  object,
+  y = NULL,
+  lambda = NULL,
+  xreg = NULL,
+  parameters = "initial",
+  ...
+)
 }
 \arguments{
 \item{object}{an object of class \dQuote{tsissm.estimate}.}
@@ -16,6 +23,9 @@
 previously used).}
 
 \item{xreg}{an optional matrix of regressors.}
+
+\item{parameters}{whether to set the parameters to their initial values, \dQuote{initial}
+or the optimally estimated \dQuote{optimal}.}
 
 \item{...}{not currently used.}
 }

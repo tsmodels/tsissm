@@ -24,12 +24,28 @@
 \item{init_states}{optional vector of states to initialize the forecast.
 If NULL, will use the last available state from the estimated model.}
 
-\item{transform}{whether to backtransform the mean forecast. For the Box-Cox 
-and logit transformations this uses a Taylor Series expansion to adjust for 
-the bias.}
+\item{transform}{whether to back transform the mean forecast. For the Box-Cox 
+transformation this uses a Taylor Series expansion to adjust for the bias.}
 
 \item{...}{not currently used.}
 }
+\value{
+a list with a slot for the analytic mean and one for the process variance. In the 
+case of dynamic variance, it returns an additional slot for the GARCH variance.
+}
 \description{
 Prediction function for class \dQuote{tsissm.estimate}.
+}
+\details{
+For the constant variance model the conditional moments are given by:
+\deqn{E\left(y_{n+h|n}^{(\omega)}\right) = \mathbf{w}' \mathbf{F}^{h-1}\mathbf{x}_n}
+\deqn{
+V\left(y_{n+h|n}^{(\omega)}\right) = 
+\begin{cases}
+\sigma^2, & \text{if } h = 1, \\[6pt]
+\sigma^2 \left[1 + \sum_{j=1}^{h-1} c_j^2 \right], & \text{if } h \geq 2.
+\end{cases}}
+The backtransformed variance should be used with caution as it uses a 
+higher-order expansion correction which is known to be inaccurate for h > 5. Instead,
+use the simulated distribution to extract this information.
 }

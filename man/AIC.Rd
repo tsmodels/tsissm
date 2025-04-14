@@ -3,9 +3,12 @@
 \name{AIC.tsissm.estimate}
 \alias{AIC.tsissm.estimate}
 \alias{AIC}
+\alias{AIC.tsissm.selection}
 \title{Akaike's An Information Criterion}
 \usage{
 \method{AIC}{tsissm.estimate}(object, ..., k = 2)
+
+\method{AIC}{tsissm.selection}(object, ..., k = 2)
 }
 \arguments{
 \item{object}{an object of class \dQuote{tsissm.estimate}.}

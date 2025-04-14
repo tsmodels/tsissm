@@ -5,10 +5,12 @@
 \alias{summary}
 \title{Model Estimation Summary}
 \usage{
-\method{summary}{tsissm.estimate}(object, digits = 4, ...)
+\method{summary}{tsissm.estimate}(object, vcov_type = "H", digits = 4, ...)
 }
 \arguments{
 \item{object}{an object of class \dQuote{tsissm.estimate}.}
+
+\item{vcov_type}{the type of standard errors based on the vcov estimate (see \code{\link{vcov}}).}
 
 \item{digits}{integer, used for number formatting. Optionally, to avoid
 scientific notation, set \sQuote{options(scipen=999)}.}
@@ -17,9 +19,6 @@ scientific notation, set \sQuote{options(scipen=999)}.}
 }
 \value{
 A printout of the parameter summary, model type and some model metrics.
-When estimated using autodiff, the standard errors, t-values and p-values will
-also be printed. In this case, if the parameters are close to their upper or
-lower bounds then it is very likely that these values will be NaN.
 }
 \description{
 Summary method for class \dQuote{tsissm.estimate}

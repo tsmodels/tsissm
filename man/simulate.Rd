@@ -3,20 +3,38 @@
 \name{simulate.tsissm.estimate}
 \alias{simulate.tsissm.estimate}
 \alias{simulate}
+\alias{simulate.tsissm.selection}
 \title{Model Simulation}
 \usage{
 \method{simulate}{tsissm.estimate}(
   object,
   nsim = 1,
   seed = NULL,
-  h = NULL,
+  h = 1,
   newxreg = NULL,
   sim_dates = NULL,
   bootstrap = FALSE,
   innov = NULL,
-  sigma_scale = 1,
+  innov_type = "q",
   pars = coef(object),
-  init_states = object$spec$xseed,
+  init_states = tail(object$model$states, 1),
+  init_res = NULL,
+  init_sigma = NULL,
+  ...
+)
+
+\method{simulate}{tsissm.selection}(
+  object,
+  nsim = 1,
+  seed = NULL,
+  h = 1,
+  newxreg = NULL,
+  sim_dates = NULL,
+  bootstrap = FALSE,
+  pars = coef(object),
+  init_states = tail(object$model$states, 1),
+  init_res = NULL,
+  init_sigma = NULL,
   ...
 )
 }
@@ -25,12 +43,9 @@
 
 \item{nsim}{the number of paths per complete set of time steps (h).}
 
-\item{seed}{an object specifying if and how the random number generator should be
+\item{seed}{a value specifying if and how the random number generator should be
 initialized (\sQuote{seeded}). Either NULL or an integer that will be used in
-a call to set.seed before simulating the response vectors. If set, the value
-is saved as the "seed" attribute of the returned value. The default, NULL
-will not change the random generator state, and return .Random.seed as the
-\dQuote{seed} attribute in the returned object.}
+a call to set.seed before simulating the response vectors.}
 
 \item{h}{the number of time steps to simulate paths for. If this is NULL,
 it will use the same number of periods as in the original series.}
@@ -45,15 +60,14 @@ will use the implied periodicity of the data to generate a regular sequence
 of dates after the first available date in the data.}
 
 \item{bootstrap}{whether to bootstrap the innovations from the estimated
-object by re-sampliag from the empirical distribution.}
+object by re-sampling from the empirical distribution.}
 
-\item{innov}{an optional vector of uniform innovations which will be
-translated to regular innovations using the appropriate distribution quantile
-function and model standard deviation. The length of this vector should be
-equal to nsim x horizon.}
+\item{innov}{an optional vector of innovations (see innov_type). 
+The length of this vector should be equal to nsim x horizon.}
 
-\item{sigma_scale}{An optional scalar which will scale the standard deviation 
-of the innovations (useful for profiling under different assumptions).}
+\item{innov_type}{if \sQuote{innov} is not NULL, then this denotes the type of values
+passed, with \dQuote{q} denoting quantile probabilities (default and
+backwards compatible) and \dQuote{z} for standardized errors.}
 
 \item{pars}{an optional named vector of model coefficients which override the
 estimated coefficients. No checking is currently performed on the adequacy of
@@ -61,6 +75,12 @@ these coefficients.}
 
 \item{init_states}{An optional vector of states to initialize the forecast. 
 If NULL, will use the first available states from the estimated model.}
+
+\item{init_res}{For a dynamic variance model, the initialization for the
+ARCH recursion of length equal to max(p,q).}
+
+\item{init_sigma}{For a dynamic variance model, the standard deviation initialization 
+for the GARCH recursion of length equal to max(p,q).}
 
 \item{...}{not currently used.}
 }

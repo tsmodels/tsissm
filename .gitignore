@@ -17,3 +17,4 @@
 *.gcno
 *.gcov
 *.dSYM
+inst/doc

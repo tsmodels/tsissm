@@ -17,8 +17,7 @@
 \value{
 A list of tables (printed out and returned invisibly) with
 Ljung-Box test for residual autocorrelation, parameter and model bounds
-diagnostics and outlier dates using the Rosner test from the
-\code{EnvStats} package.
+diagnostics and outlier dates using the Rosner test (\code{\link[EnvStats]{rosnerTest}}).
 }
 \description{
 Creates a short summary of model based diagnostics.

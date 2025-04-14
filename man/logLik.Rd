@@ -3,9 +3,12 @@
 \name{logLik.tsissm.estimate}
 \alias{logLik.tsissm.estimate}
 \alias{logLik}
+\alias{logLik.tsissm.selection}
 \title{Model Log-Likelihood}
 \usage{
 \method{logLik}{tsissm.estimate}(object, ...)
+
+\method{logLik}{tsissm.selection}(object, ...)
 }
 \arguments{
 \item{object}{an object of class \dQuote{tsissm.estimate}.}

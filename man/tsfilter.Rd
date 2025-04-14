@@ -3,12 +3,15 @@
 \name{tsfilter.tsissm.estimate}
 \alias{tsfilter.tsissm.estimate}
 \alias{tsfilter}
+\alias{tsfilter.tsissm.selection}
 \title{Online Model Filtering}
 \usage{
 \method{tsfilter}{tsissm.estimate}(object, y = NULL, newxreg = NULL, ...)
+
+\method{tsfilter}{tsissm.selection}(object, y = NULL, newxreg = NULL, ...)
 }
 \arguments{
-\item{object}{an object of class \dQuote{tsissm.estimate}.}
+\item{object}{an object of class \dQuote{tsissm.estimate} or \dQuote{tsissm.selection}.}
 
 \item{y}{an xts vector of new information related to y. The function checks
 whether y contains indices (dates) which are not in the passed object and
@@ -20,7 +23,7 @@ only filters new information.}
 \item{...}{not currently used.}
 }
 \value{
-An object of class \dQuote{tsissm.estimate}.
+An object of class \dQuote{tsissm.estimate} or  \dQuote{tsissm.selection}.
 }
 \description{
 Online filter which updates the states and fitted values using

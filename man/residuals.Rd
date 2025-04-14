@@ -5,36 +5,14 @@
 \alias{residuals}
 \title{Model Residuals}
 \usage{
-\method{residuals}{tsissm.estimate}(
-  object,
-  raw = FALSE,
-  h = 1,
-  seed = NULL,
-  trace = FALSE,
-  index_start = 1,
-  ...
-)
+\method{residuals}{tsissm.estimate}(object, standardize = FALSE, transformed = TRUE, ...)
 }
 \arguments{
 \item{object}{an object of class \dQuote{tsissm.estimate}.}
 
-\item{raw}{raw residuals are the model based values in transformed space 
-(when either Box Cox or Logistic have been used as transformatiions).}
+\item{standardize}{whether to scale the residuals by the estimated standard deviation.}
 
-\item{h}{the horizon (steps) ahead residuals required. The default represents
-the standard residuals whilst for h>1 these are the (1:h)-step ahead in-sample
-predicted residuals for each time point under fixed coefficients.}
-
-\item{seed}{a seed value which initializes the simulated predictive distribution
-from which the h-step ahead forecasts are made in order to calculate the residuals.}
-
-\item{trace}{whether to show the progress bar for the h-step ahead residuals
-calculation. The user is expected to have set up appropriate handlers for
-this using the \dQuote{progressr} package.}
-
-\item{index_start}{the numeric index of the series from which to start the 
-evaluation (defaults to the first data point). For very large series, one may 
-be interested in discarding earlier periods.}
+\item{transformed}{residuals based values in transformed space (Box Cox).}
 
 \item{...}{not currently used.}
 }

@@ -1,0 +1,178 @@
+---
+title: "Regular Spacings and Seasonality"
+output: 
+    rmarkdown::html_vignette:
+        css: custom.css
+        code_folding: hide
+        toc: yes
+vignette: >
+  %\VignetteIndexEntry{Regular Spacings and Seasonality}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup, warning=FALSE,message=FALSE}
+library(tsissm)
+library(xts)
+library(data.table)
+library(tsaux)
+library(knitr)
+library(zoo)
+```
+
+## Introduction
+
+A recent blog [post](https://research.google/blog/autobnn-probabilistic-time-series-forecasting-with-compositional-bayesian-neural-networks/)  
+from Google Research introduced a compositional Bayesian neural network model 
+and showcased it using the well-known monthly average $CO_2$ concentrations from 
+the Mauna Loa observatory. While the example is informative, the monthly series 
+poses little challenge from a modeling perspective.
+
+In contrast, this vignette explores the daily Mauna Loa $CO_2$ dataset, which 
+introduces substantial complexity due to its irregular sampling — data is not 
+available for every day of the year. This irregularity poses problems for seasonal 
+modeling, as uneven time intervals distort lag relationships and degrade model inference.
+
+We demonstrate how the `tsissm` package, which natively supports missing values, 
+can be used to reframe irregular series onto a regular time grid with gaps — improving 
+both seasonal modeling and forecast accuracy.
+
+
+## Data Investigation
+
+We begin by visualizing the daily Mauna Loa $CO_2$ series:
+
+```{r, fig.width=6,fig.height=3}
+data("maunaloa")
+opar <- par(mfrow = c(1,1))
+par(mar = c(2,2,2,2))
+plot(zoo(maunaloa$co2, maunaloa$date), type = "l", xlab = "", ylab = "", main = "Mauna Loa Daily Average CO2")
+par(opar)
+```
+
+This dataset spans more than 20 years of daily averages. There is a clear seasonal 
+pattern and a persistent upward trend. However, a closer look reveals that the 
+number of observations per year is not constant:
+
+```{r, fig.width=6,fig.height=3}
+d <- data.table(date = maunaloa$date, value = maunaloa$co2)
+d[, year := year(date)]
+s <- d[,list(.N), by = "year"]
+opar <- par(mfrow = c(1,1))
+par(mar = c(2,2,2,2))
+barplot(s$N, names.arg = s$year, main = "Observations/Year", col = "steelblue")
+par(opar)
+```
+
+This inconsistency in daily coverage is the root of many issues when trying to fit seasonal models.
+
+
+## Naive Approach (Irregular Time Base)
+
+A naive approach would be to directly model the series as-is, using a fixed 
+seasonal frequency. For this example, we hold out the years 2024–2025 for evaluation:
+
+```{r, fig.width=6,fig.height=3}
+co2 <- xts(maunaloa$co2, maunaloa$date)
+train <- co2["/2023"]
+test <- co2["2024/"]
+spec_naive <- issm_modelspec(train, slope = TRUE, seasonal = TRUE, seasonal_frequency = 320, seasonal_harmonics = 2)
+# fixed slope
+spec_naive$parmatrix[parameters == "beta", initial := 0]
+spec_naive$parmatrix[parameters == "beta", lower := 0]
+spec_naive$parmatrix[parameters == "beta", estimate := 0]
+mod_naive <- estimate(spec_naive, scores = FALSE)
+p_naive <- predict(mod_naive, h = length(test), nsim = 3000, forc_dates = index(test))
+opar <- par(mfrow = c(1,1))
+par(mar = c(2,2,2,2))
+plot(p_naive, n_original = 600, gradient_color = "yellow", interval_color = "orange", main = "CO2 [Naive] Model Prediction", median_width = 1, xlab = "")
+lines(index(test), as.numeric(test), col = 3)
+legend("topleft", c("Median Forecast","Actual"), col = c(1,3), lty = 1, bty = "n")
+par(opar)
+```
+
+The resulting forecast exhibits a phase shift in the seasonal component. 
+This is expected — irregular time spacing distorts seasonality, resulting in 
+inaccurate timing of peaks and troughs.
+
+## Correct Approach (Regular Time Base with Missing Values)
+
+A better solution is to recast the series on a regular daily time grid, filling 
+in missing observations with NA. Since `tsissm` supports missing values in the 
+response variable $y_t$, this allows us to model the series in calendar time 
+while preserving seasonal structure.
+
+In `tsissm`, if y_t is missing, the innovation $\varepsilon_t$ is set to 
+zero — its expected value — effectively treating the model output as a 
+one-step-ahead forecast. These missing values are ignored in the likelihood and 
+handled correctly during state filtering.
+
+```{r}
+full_dates <- seq(index(co2)[1], tail(index(co2),1), by = "days")
+co2_full <- xts(rep(as.numeric(NA), length(full_dates)), full_dates)
+co2_full <- cbind(co2_full, co2, join = "left")
+co2_full <- co2_full[,-1]
+```
+
+This new dataset now spans a regular daily grid. The percentage increase in data 
+points (mostly NA) is: `r print(paste0(round(100 * (NROW(co2_full)/NROW(co2) - 1),0), "%"))` more data points which are all missing values.
+
+## Re-estimating with Regularized Calendar Time
+
+```{r, fig.width=6,fig.height=3}
+train_full <- co2_full["/2023"]
+test_full <- co2_full["2024/"]
+spec <- issm_modelspec(train_full, slope = TRUE, seasonal = TRUE, seasonal_frequency = 366, seasonal_harmonics = 5, distribution = "norm")
+# fixed slope
+spec$parmatrix[parameters == "beta", initial := 0]
+spec$parmatrix[parameters == "beta", lower := 0]
+spec$parmatrix[parameters == "beta", estimate := 0]
+mod <- estimate(spec, scores = FALSE)
+p <- predict(mod, h = length(test_full), nsim = 3000, forc_dates = index(test_full))
+opar <- par(mfrow = c(1,1))
+par(mar = c(2,2,2,2))
+plot(p, n_original = 600, gradient_color = "yellow", interval_color = "orange", main = "CO2 [Correct] Model Prediction", median_width = 1, xlab = "")
+lines(index(test_full), as.numeric(test_full), col = 3)
+legend("topleft", c("Median Forecast","Actual"), col = c(1,3), lty = 1, bty = "n")
+par(opar)
+```
+
+The forecast now clearly aligns better with the actual seasonal pattern — the 
+phase error seen earlier has been corrected.
+
+## Evaluation
+
+We compare forecast accuracy between the naive and corrected models using MAPE and CRPS. 
+Only non-missing values are considered:
+
+```{r}
+use <- which(!is.na(as.numeric(test_full)))
+tab <- data.frame(MAPE = c(mape(as.numeric(test), as.numeric(p_naive$analytic_mean)) * 100, 
+                           mape(as.numeric(test_full)[use], as.numeric(p$analytic_mean)[use]) * 100),
+                  CRPS = c(crps(as.numeric(test), p_naive$distribution), crps(as.numeric(test_full)[use], p$distribution[,use])))
+rownames(tab) <- c("Naive","Correct")
+colnames(tab) <- c("MAPE (%)", "CRPS")
+tab |> kable(digits = 2)
+```
+
+The table shows a clear improvement in both metrics for the correctly specified model — particularly a halving of the MAPE.
+
+## Conclusion
+
+Irregular sampling in time series — especially those with seasonal structure — can 
+significantly impair model inference and forecasting. This vignette demonstrated 
+how naive models fitted on irregular time bases can introduce phase errors and bias. 
+By recasting the series onto a regular grid with missing values, and leveraging 
+`tsissm’s` built-in support for such data, we were able to restore seasonal 
+fidelity and greatly improve forecast accuracy.
+
+This approach is general and applicable to many real-world time series where 
+regular sampling cannot be guaranteed.
+

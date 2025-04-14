@@ -6,8 +6,7 @@
 #' @param ... not currently used.
 #' @return A list of tables (printed out and returned invisibly) with
 #' Ljung-Box test for residual autocorrelation, parameter and model bounds
-#' diagnostics and outlier dates using the Rosner test from the
-#' \code{EnvStats} package.
+#' diagnostics and outlier dates using the Rosner test (\code{\link[EnvStats]{rosnerTest}}).
 #' @aliases tsdiagnose
 #' @method tsdiagnose tsissm.estimate
 #' @rdname tsdiagnose
@@ -17,7 +16,7 @@
 tsdiagnose.tsissm.estimate <- function(object, plot = FALSE, ...)
 {
     if (sum(object$spec$arma$order) > 0) {
-        cat("\nARMA roots")
+        cat("\nARMA roots (<1)")
         cat("\n------------------------------------------\n")
         armav <- coef(object)
         armav <- armav[grepl("theta|psi", names(armav))]
@@ -33,15 +32,16 @@ tsdiagnose.tsissm.estimate <- function(object, plot = FALSE, ...)
     } else {
         rt <- NULL
     }
-    cat("\nForecastability (D roots)")
+    cat("\nForecastability")
     cat("\n------------------------------------------\n")
-    e <- abs(Re(eigen(object$model$D)$values))
+    e <- abs(eigen(object$model$D, symmetric = FALSE)$values)
     cat("Real Eigenvalues (D):", round(e,3))
     cat("\n")
     cat("\nWeighted Ljung-Box Test [scaled residuals]")
     cat("\n------------------------------------------\n")
     df <- sum(object$spec$arma$order)
-    r <- as.numeric(na.omit(scale(residuals(object))))
+    sigma <- sigma(object)
+    r <- as.numeric(na.omit(residuals(object, transformed = TRUE)/sigma))
     if (sum(object$spec$arma$order) > 0 ) j = 0 else j = 1
     b1 <- weighted_box_test(r, lag = 1, type = "Ljung-Box", fitdf = 0)
     b2j <- pmax(2 * df + df - 1, 1 + df + j)
@@ -54,9 +54,9 @@ tsdiagnose.tsissm.estimate <- function(object, plot = FALSE, ...)
                        statistic = c(b1$statistic[[1]], b2$statistic[[1]], b3$statistic[[1]],b4$statistic[[1]]),
                        pvalue = c(b1$p.value[[1]], b2$p.value[[1]],b3$p.value[[1]], b4$p.value[[1]]))
     print(lbsr, row.names = FALSE, digits = 3)
-    rtest <- rosnerTest(as.numeric(na.omit(residuals(object))), k = 10)
-    if (any(rtest$all.stats$Outlier)) {
-        out.index <- object$spec$target$index[which(object$spec$good == 1)][rtest$all.stats$Obs.Num[rtest$all.stats$Outlier]]
+    rtest <- .rosner_test(as.numeric(na.omit(residuals(object, transformed = TRUE))), k = 10)
+    if (any(rtest$Outlier)) {
+        out.index <- object$spec$target$index[which(object$spec$good == 1)][rtest$Obs.Num[rtest$Outlier]]
         cat("\nOutlier Diagnostics (based on Rosner Test)")
         cat("\n------------------------------------------")
         cat("\nOutliers:", as.character(out.index))

@@ -1,0 +1,139 @@
+---
+title: "Variance Dynamics"
+output: 
+    rmarkdown::html_vignette:
+        css: custom.css
+        code_folding: hide
+        toc: yes
+bibliography: references.bib
+bibliography-style: apalike
+natbiboptions: round
+vignette: >
+  %\VignetteIndexEntry{Variance Dynamics}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup, warning=FALSE,message=FALSE}
+library(tsissm)
+library(xts)
+library(data.table)
+library(tsaux)
+library(knitr)
+library(zoo)
+```
+
+## Introduction
+
+In Section 19.2.2 of @Hyndman2008, the authors illustrate an extension of the innovations 
+state space model incorporating exponential GARCH dynamics. The appeal of the 
+exponential GARCH model lies in its ability to ensure positivity of the variance 
+without requiring parameter constraints.
+
+In the `tsissm` package, we instead opt for the standard (vanilla) GARCH model, 
+applying bounds on both the GARCH parameters and the overall persistence of the 
+variance process. While this may initially appear more complex, it is actually 
+simpler in practice—especially when accommodating non-Gaussian distributions. 
+For example, using Johnson’s SU distribution complicates the calculation of the 
+expected value of the absolute standardized innovations, which lacks a closed form 
+and is required in the exponential GARCH model. With a standard GARCH structure, 
+this complexity is avoided.
+
+That said, the decision to include variance dynamics should be made with care. 
+Many nominal economic time series that exhibit apparent heteroscedasticity become 
+much more homoscedastic when deflated by the Consumer Price Index (CPI) or a similar 
+price index. Moreover, structural breaks and transitory changes can mimic 
+heteroscedastic behavior, misleading standard statistical tests into detecting 
+heteroscedasticity when none is truly present.
+
+
+## SPY Closing Price
+
+Heteroscedasticity in financial returns typically stems from volatility clustering, 
+asymmetric responses to news, and shifting market conditions. These characteristics 
+make GARCH-type models a natural choice in financial econometrics.
+
+In this example, we model the adjusted closing prices of the S&P 500 ETF (SPY) 
+using the innovations state space model. The specification includes:
+
+- Log returns ($\lambda = 0$)
+- A random walk component
+- AR dynamics
+- GARCH(1,1) variance dynamics
+- Johnson’s SU distribution for the residuals
+
+We also account for structural level shifts, such as those occurring around the 
+COVID-19 pandemic, by including them as regressors.
+
+```{r}
+data("spy", package = "tsissm")
+y <- as.xts(spy)
+xreg <- auto_regressors(y["2014/"], frequency = 1, lambda = 0, sampling = "days", method = "full",
+                         check.rank = TRUE, discard.cval = 3.5, maxit.iloop = 10, maxit.oloop = 10, types = "LS")
+
+exc <- which(xreg$xreg["2020-02-03"] == 1)
+xreg$xreg <- xreg$xreg[,-exc]
+xreg$init <- xreg$init[-exc]
+```
+
+
+We begin by estimating two models—one with constant variance, and one with time-varying (GARCH) variance:
+
+```{r}
+spec_constant <- issm_modelspec(y["2014/"], slope = FALSE, seasonal = FALSE, ar = 2, ma = 0, xreg = xreg$xreg,
+                       lambda = 0, variance = "constant", distribution = "jsu")
+spec_constant$parmatrix[grepl("^kappa", parameters), initial := xreg$init]
+mod_constant <- estimate(spec_constant, scores = FALSE)
+
+spec_dynamic <- issm_modelspec(y["2014/"], slope = TRUE, seasonal = FALSE, ar = 1, ma = 0, xreg = xreg$xreg,
+                       lambda = 0, variance = "dynamic", distribution = "jsu")
+spec_dynamic$parmatrix[grepl("^kappa",parameters), initial := xreg$init]
+mod_dynamic <- estimate(spec_dynamic, scores = FALSE)
+print(paste0("AIC(Dynamic): ", round(AIC(mod_dynamic),1)," | AIC(Constant): ", round(AIC(mod_constant),1)))
+```
+
+Based on the AIC values, the model with dynamic variance is preferred—even 
+though it involves more parameters—demonstrating the usefulness of capturing 
+volatility dynamics.
+
+
+### Model Summary
+
+You can obtain a clean, professional summary of the estimated model using the 
+as_flextable() method:
+
+```{r}
+mod_dynamic |> summary() |> as_flextable()
+```
+
+### Visuals
+
+The plot of the model components clearly displays the time-varying volatility 
+typically associated with GARCH models:
+
+```{r, fig.width=6,fig.height=6}
+plot(mod_dynamic)
+```
+
+
+## Conclusion
+
+This vignette demonstrated how to model time-varying volatility using a financial 
+time series example with the `tsissm` package. We showed how standard innovations 
+state space models can be extended with GARCH dynamics and non-Gaussian distributions 
+such as Johnson’s SU, allowing for more flexible modeling of conditional variance 
+and fat-tailed behavior. This provides a robust framework for capturing some of the 
+complexities of real-world time series, especially when volatility is an essential 
+component of the dynamics.
+
+
+## References
+

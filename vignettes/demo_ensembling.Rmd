@@ -1,0 +1,168 @@
+---
+title: "Automatic Selection and Ensembling"
+output: 
+    rmarkdown::html_vignette:
+        css: custom.css
+        code_folding: hide
+        toc: yes
+vignette: >
+  %\VignetteIndexEntry{Automatic Selection and Ensembling}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup, warning=FALSE,message=FALSE}
+library(knitr)
+library(tsissm)
+library(xts)
+library(tsaux)
+library(data.table)
+library(zoo)
+```
+
+## Introduction
+
+The `issm_modelspec()` function is the primary entry point for modeling in the 
+`tsissm package`. It defines a model specification with support for automatic 
+selection across multiple configurations. In addition to selecting the single 
+best model (e.g., by AIC), it can optionally return the top N ranked models, 
+enabling downstream model ensembling for filtering, forecasting and simulation.
+
+This vignette demonstrates that functionality using U.S. Advanced Retail Sales 
+data available in the package.
+
+## Advanced Retail Sales
+
+This dataset represents the monthly, non-seasonally adjusted advance estimate of 
+retail trade sales, based on a sub-sample of firms from the larger Monthly Retail 
+Trade Survey.
+
+As shown in the plot below, the series exhibits two prominent structural breaks: 
+one around 2008 during the Global Financial Crisis, and another during the 
+COVID-19 pandemic. To address this, we use the `auto_regressors()` function from 
+the [tsaux](https://CRAN.R-project.org/package=tsaux) package, which detects and encodes three types of anomalies: 
+additive outliers, temporary changes, and structural breaks (see this blog [post](https://www.nopredict.com/blog/posts/2022-05-15-messy-data-and-anomaly-detection/) 
+for details).
+
+Modeling such anomalies is important. When ignored, they are often absorbed by 
+other components of the model, leading to biased coefficient estimates and inflated forecast variance.
+
+```{r, fig.width=6,fig.height=3}
+data("us_retail_sales")
+opar <- par(mfrow = c(1,1))
+y <- as.xts(us_retail_sales)
+par(mar = c(2,2,2,2))
+plot(as.zoo(y), ylab = "Sales (Mil's S)", xlab = "", main = "Advance Retail Sales")
+grid()
+par(opar)
+```
+
+
+## Model Selection
+
+For this demonstration, we reserve the last 26 months of data for forecasting 
+evaluation and select the top 4 models for ensembling.
+
+
+```{r}
+train <- y["/2022"]
+test <- y["2023/"]
+lambda_pre_estimate <- box_cox(lambda = NA)$transform(train) |> attr("lambda")
+xreg <- auto_regressors(train, frequency = 12, lambda = lambda_pre_estimate, sampling = "months", h = 26, method = "sequential", 
+                        check.rank = TRUE, discard.cval = 3.5, maxit.iloop = 10, maxit.oloop = 10, 
+                        forc_dates = index(test))
+spec <- issm_modelspec(train, auto = TRUE, slope = c(TRUE, FALSE), seasonal = TRUE, 
+                             seasonal_harmonics = list(c(3,4,5)), xreg = xreg$xreg[index(train), ], 
+                             seasonal_frequency = 12, ar = 0:2, ma = 0:2, lambda = lambda_pre_estimate, top_n = 4)
+mod <- spec |> estimate()
+```
+
+
+We first inspect the top selected model:
+
+```{r}
+mod$models[[1]] |> summary() |> as_flextable()
+```
+
+This model uses 5 harmonics and an ARMA(2,1) structure. Most coefficients appear 
+statistically significant. We can also summarize the top 4 selected models:
+
+```{r}
+mod$table |> kable()
+```
+
+All top models use 5 harmonics. The main differences lie in the ARMA specification,
+and one model does not include a slope term. The pairwise correlation among model 
+predictions is very high — expected, given the small structural differences:
+
+```{r}
+mod$correlation |> kable()
+```
+
+
+
+## Prediction and Ensembling
+
+The object returned by `estimate()` when top_n > 1 is of class `tsissm.selection`. 
+This class supports `tsfilter()`, `predict()`, and `simulate()` methods, which 
+apply operations to each retained model, returning individual results. These can 
+then be ensembled using the tsensemble() function.
+
+Below, we generate forecasts from the top model and from all 4 models, 
+and then ensemble them using equal weights:
+
+```{r}
+p_top <- mod$models[[1]] |> predict(h = nrow(test), seed = 100, nsim = 2000, newxreg = xreg$xreg[index(test),])
+p_all <- mod |> predict(h = nrow(test), seed = 100, nsim = 2000, newxreg = xreg$xreg[index(test),])
+p_ensemble <- p_all |> tsensemble(weights = rep(1/4,4))
+```
+
+We visualize the top model’s forecast and overlay the ensembled forecast distribution. 
+The actual data is also shown for reference.
+
+```{r, fig.width=6,fig.height=3}
+opar <- par(mfrow = c(1,1))
+par(mar = c(2,2,2,2))
+p_top |> plot(n_original = 50, gradient_color =  "aliceblue", interval_type = 2, interval_color = "steelblue", interval_width = 1, median_width = 1.5, xlab = "")
+p_ensemble$distribution |> plot(gradient_color =  "aliceblue", interval_type = 3, interval_color = "green", interval_width = 1, median_width = 1.5, 
+                                median_type = 1, median_color = "green", add = TRUE)
+lines(index(test), as.numeric(test), col = 2, lwd = 1.5)
+legend("topleft", c("Historical","Actual (Forecast)", "Top (Forecast)", "Ensemble (Forecast)"), col = c("red","red","black","green"), lty = c(1,1.5,1.5,1.5), bty = "n")
+par(opar)
+```
+
+Note: You can overlay multiple predictive distributions using the `add = TRUE` argument in `plot()` for
+class `tsmodel.distribution`.
+
+The following table compares performance metrics between the top model and the 
+ensemble forecast. The ensemble consistently outperforms the top model across all metrics:
+
+```{r}
+tab <- rbind(tsmetrics(p_top, actual = test, alpha = 0.1),
+             tsmetrics(p_ensemble, actual = test, alpha = 0.1))
+rownames(tab) <- c("Top","Ensemble")
+tab |> kable()
+```
+
+
+## Conclusion
+
+The `tsissm` package provides a flexible and robust framework for modeling, 
+forecasting, and simulating time series data using the innovations state space model. 
+By supporting full model enumeration, automatic selection, and simulation-based 
+prediction, it offers a rich toolkit for handling complex seasonal patterns 
+and heteroscedasticity, and the availability of regressors allows the handling
+of identified outliers and structural breaks.
+
+This vignette demonstrated how to apply automatic model selection with support 
+for retaining the top N models and performing ensemble forecasting. By leveraging 
+both predictive distributions and weighted ensembling, users can obtain more 
+stable and accurate forecasts — particularly valuable when models are structurally 
+similar but individually uncertain.

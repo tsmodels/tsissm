@@ -3,34 +3,40 @@
 \name{estimate.tsissm.spec}
 \alias{estimate.tsissm.spec}
 \alias{estimate}
+\alias{estimate.tsissm.autospec}
 \title{Model Estimation}
 \usage{
 \method{estimate}{tsissm.spec}(
   object,
-  solver = "nlminb",
-  control = list(trace = 0),
-  autodiff = TRUE,
+  control = issm_control(algorithm = "SLSQP", trace = 0),
+  scores = TRUE,
+  debug_mode = FALSE,
   ...
 )
+
+\method{estimate}{tsissm.autospec}(object, control = NULL, trace = FALSE, ...)
 }
 \arguments{
-\item{object}{an object of class \dQuote{tsissm.spec}.}
+\item{object}{an object of class \dQuote{tsissm.spec} or \dQuote{tsissm.autospec}.}
 
-\item{solver}{one of either \dQuote{solnp}, \dQuote{nlminb} or \dQuote{optim}.
-The latter uses the L-BFGS-B algorithm from the lbfgsb3c package. For option
-\dQuote{autodiff}, valid solvers are \dQuote{nlminb} and \dQuote{nloptr}.}
+\item{control}{solver control parameters passed to the nloptr function.}
 
-\item{control}{solver control parameters.}
+\item{scores}{whether to calculate the analytic scores (Jacobian) of the
+likelihood. This is not available for the \dQuote{tsissm.autospec} object.}
 
-\item{autodiff}{whether to use automatic differentiation for estimation.
-This makes use of the tsissmad package.}
+\item{debug_mode}{for development testing, will include the TMB object.}
 
-\item{...}{only additional argument which can be passed when choosing autodiff
-is that of \dQuote{use_hessian} which tells the solver to make use of second
-derivatives.}
+\item{...}{not used.}
+
+\item{trace}{whether to show a progress bar for the automatic selection object.}
 }
 \value{
-An object of class \dQuote{tsissm.estimate}
+An object of class \dQuote{tsissm.estimate} or \dQuote{tsissm.selection}.
+In the case of automatic model selection an object of class \dQuote{tsissm.estimate} 
+will be returned based on AIC (minimum) if \dQuote{top_n} is 1, else an object of
+class \dQuote{tsissm.selection} with a list of length \dQuote{top_n}. This object
+can then be used for filtering, prediction and simulation and then ensembled 
+(based on user specified weights).
 }
 \description{
 Estimates a model given a specification object using
@@ -38,5 +44,18 @@ maximum likelihood.
 }
 \details{
 The maximum likelihood estimation for this model is described in the 
-online book of tsmodels.
+vignette.
+}
+\note{
+When calculating the scores, a future promise is created so it is fastest if
+a future plan is pre-created with at least 2 workers so that the function can 
+run in the background without having to wait for the estimation object to be
+returned.\cr
+If the control argument is NULL, then we hybrid strategy is adopted whereby
+the SLSQP algorithm is initially used and if it fails (status less than 0) 
+then the Augmented Lagrange with MMA local solver is used which is slower but
+may be more reliable.\cr
+For the automatic selection estimation, this will benefit from the use of multiple
+processes which can be set up with a \code{\link[future]{plan}}. For progress
+tracing, use \code{\link[progressr]{handlers}}.
 }

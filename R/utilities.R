@@ -226,3 +226,58 @@ matpower <- function(x, k)
     }
     return(x.k)
 }
+
+seasonal_symbol_maker <- function(x) {
+    matches <- regmatches(x, regexec("gamma([0-9.]+)\\.([0-9]+)", x))[[1]]
+    period <- matches[2]
+    coefficient <- matches[3]
+    paste0("\\gamma^{", period, "}_{", coefficient, "}")
+}
+
+valid_data <- function(x, good)
+{
+    return(x[which(good == 1)])
+}
+
+
+.make_pd <- function(x) {
+    d <- NROW(x)
+    es <- eigen(x, symmetric = TRUE)
+    esv <- es$values
+    tol <- d * max(abs(esv)) * .Machine$double.eps
+    delta <- 2 * tol
+    tau <- pmax(0, delta - esv)
+    dx <- es$vectors %*% diag(tau, d) %*% t(es$vectors)
+    return(x + dx)
+}
+
+.is_pd <- function(x) {
+    eval <- eigen(x, only.values = TRUE, symmetric = TRUE)$values
+    if (is.complex(eval)) {
+        return(FALSE)
+    }
+    tol <- max(dim(x)) * max(abs(eval)) * .Machine$double.eps
+    if (sum(eval > tol) == length(eval)) {
+        return(TRUE)
+    } else {
+        return(FALSE)
+    }
+}
+
+.retain_dimensions_array <- function(x, i)
+{
+    dims <- dim(x[,,i, drop = FALSE])
+    if (is.vector(x[,,i])) {
+        return(matrix(x[,,i], nrow = dims[1], ncol = dims[2]))
+    } else {
+        return(x[,,i])
+    }
+}
+
+# wrapper for viridis::viridis_pal to use viridisLite which is lighter
+.viridis_fun <- function(alpha = 1, begin = 0, end = 1, direction = 1, option = "D") 
+{
+    function(n) {
+        viridis(n, alpha, begin, end, direction, option)
+    }
+}

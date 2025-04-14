@@ -5,17 +5,7 @@
 \alias{tsprofile}
 \title{Model Simulation Based Profiling}
 \usage{
-\method{tsprofile}{tsissm.estimate}(
-  object,
-  h = 1,
-  nsim = 100,
-  seed = NULL,
-  trace = FALSE,
-  sigma_scale = 1,
-  solver = "nlminb",
-  autodiff = TRUE,
-  ...
-)
+\method{tsprofile}{tsissm.estimate}(object, h = 1, nsim = 100, seed = NULL, trace = FALSE, ...)
 }
 \arguments{
 \item{object}{an object of class \dQuote{tsissm.estimate}.}
@@ -29,13 +19,6 @@ should be initialized. See the simulate documentation for more details.}
 
 \item{trace}{whether to show the progress bar. The user is expected to have
 set up appropriate handlers for this using the \dQuote{progressr} package.}
-
-\item{sigma_scale}{a scaling factor for the innovations standard deviation.}
-
-\item{solver}{choice of solver to use for the estimation of the paths.}
-
-\item{autodiff}{whether to use automatic differentiation for estimation.
-This makes use of the tsissmad package.}
 
 \item{...}{not currently used.}
 }
@@ -60,4 +43,7 @@ also returned with the distribution of the coefficients from each path estimatio
 \note{
 The function can use parallel functionality as long as the user has set
 up a \code{\link[future]{plan}} using the future package.
+The simulated states are checked for positivity and any paths which have negative
+values are excluded. If more than half of the paths have negative values then
+an error is raised and the function will stop.
 }

@@ -1,0 +1,138 @@
+---
+title: "Filtering and Prediction"
+output: 
+    rmarkdown::html_vignette:
+        css: custom.css
+        code_folding: hide
+        toc: yes
+vignette: >
+  %\VignetteIndexEntry{Filtering and Prediction}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup, warning=FALSE,message=FALSE}
+library(tsissm)
+library(tsaux)
+library(xts)
+library(data.table)
+library(zoo)
+```
+
+## Introduction
+
+Online filtering refers to the process of sequentially updating the estimated 
+states of a time series model as new observations become available, without 
+re-estimating the model parameters. This is a real-time inference technique where 
+internal components of the model—such as level, trend, seasonal effects, or other 
+latent states—are updated dynamically using the most recent data, while holding 
+model parameters fixed.
+
+This functionality is especially useful for real-time forecasting, where updated 
+h-step ahead forecasts are generated as new data arrives, avoiding the computational 
+cost of full re-estimation.
+
+## Demonstration
+
+We'll use the U.S. Advance Monthly Retail Sales dataset, which captures monthly, 
+non-seasonally adjusted sales figures based on a sub-sample of firms from the 
+broader Monthly Retail Trade Survey.
+
+### Estimation
+
+```{r}
+data("us_retail_sales")
+y <- as.xts(us_retail_sales)
+train <- y["/2023"]
+test <- y["2024/"]
+lambda_pre_estimate <- box_cox(lambda = NA)$transform(train) |> attr("lambda")
+xreg <- auto_regressors(train, frequency = 12, lambda = lambda_pre_estimate, sampling = "months", h = 14, method = "sequential", 
+                        check.rank = TRUE, discard.cval = 3.5, maxit.iloop = 10, maxit.oloop = 10, 
+                        forc_dates = index(test))
+spec <- issm_modelspec(train, slope = TRUE, seasonal = TRUE, seasonal_frequency = 12,
+                       seasonal_harmonics = 5, ar = 1, ma = 0, lambda = lambda_pre_estimate, 
+                       xreg = xreg$xreg[index(train),])
+spec$parmatrix[grepl("^kappa", parameters), initial := xreg$init]
+mod <- spec |> estimate()
+```
+
+
+### Rolling Forecasts via Online Filtering
+
+With the model estimated, we can now generate a rolling 1-step ahead forecast 
+without re-estimation. This is similar to the functionality in `tsbacktest`, 
+but online filtering allows for real-time updates to the model states.
+
+```{r}
+test_xreg <- xreg$xreg[index(test),]
+predict_list <- vector(mode = "list", length = 14)
+predict_list[[1]] <- predict(mod, h = 1, newxreg = test_xreg[1,])
+new_mod <- mod
+for (i in 2:14) {
+    new_mod <-  tsfilter(new_mod, y = test[i - 1], newxreg = test_xreg[i - 1, ])
+    predict_list[[i]] <- predict(new_mod, h = 1, newxreg = test_xreg[i,])
+}
+forecast_distribution <- do.call(cbind, lapply(predict_list, function(x) x$distribution))
+forecast_mean <- do.call(rbind, lapply(predict_list, function(x) x$analytic_mean))
+class(forecast_distribution) <- "tsmodel.distribution"
+test_transformed <- cbind(fitted(new_mod)[index(test)], forecast_mean)
+colnames(test_transformed) <- c("Filtered","Forecast")
+head(test_transformed)
+```
+
+### Filtering vs Forecasting at Horizon ( h = 1 )
+
+You may notice a small discrepancy between the 1-step ahead filtered values (Filtered) and 
+the corresponding forecasts (Forecast). This difference is not due to rounding, 
+but rather to a bias adjustment applied during the back-transformation from the 
+Box-Cox scale in forecasting.
+
+- Filtering computes the conditional expectation of the transformed variable and inverts it without bias correction.
+- Forecasting returns the unbiased expectation on the original scale by applying a second-order bias correction.
+
+The filtered value reflects the "best guess of the latent process given all 
+information up to (t-1), whereas the forecast represents the expected value of 
+the original variable on its natural scale.
+
+To confirm the two are the same on the transformed scale:
+
+```{r}
+p <- tsmoments(mod, h = 1, newxreg = test_xreg[1,], transform = FALSE)
+tmp_mod <-  tsfilter(mod, y = test[1], newxreg = test_xreg[1, ])
+fitted_value <- tail(tmp_mod$spec$target$y, 1) - tail(tmp_mod$model$error,1)
+all.equal(p$mean, fitted_value)
+```
+
+which are exactly the same in the transformed space.
+
+The `tsfilter` method takes in new information (it need not be a scalar),
+and updates the information set in the estimated model, after checking for
+any duplicate time indices in the submitted data, or time indices before the
+last time index. Thus the returned object is just an updated `tsissm.estimate`
+class object.
+
+### Visual Comparison
+
+We now compare the original fitted values with the filtered and forecasted values.
+
+```{r, fig.width=6,fig.height=4}
+filtered_model <- fitted(new_mod)
+original_model <- fitted(mod)
+forecast_model <- forecast_mean
+Z <- cbind(original_model, filtered_model, forecast_model)
+matplot(index(tail(Z,50)), coredata(tail(Z,50)), type = c("l","l","p"), col = c("black","orange","steelblue"), pch = c(1,1,1), lty = c(1,2,1), ylab = "", xlab = "", lwd = c(1,1.5, 1.8))
+legend("topleft", c("Fitted","Filtered","Forecast"), col = c("black","orange","steelblue"), lty = c(1,1,NA), lwd = c(1,1.5, 1.8), pch = c(NA,NA,1), bty = "n")
+```
+
+## Conclusion
+
+This vignette demonstrates how online filtering can be used to sequentially update 
+the internal state of a time series model without re-estimating parameters. 
+This enables fast, real-time updates and 1-step ahead forecasts.

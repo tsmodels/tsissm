@@ -6,41 +6,46 @@
 \usage{
 issm_modelspec(
   y,
+  auto = FALSE,
   slope = TRUE,
   slope_damped = FALSE,
   seasonal = FALSE,
   seasonal_frequency = 1,
-  seasonal_type = c("trigonometric", "regular"),
   seasonal_harmonics = NULL,
   ar = 0,
   ma = 0,
   xreg = NULL,
-  transformation = "box-cox",
-  lambda = 1,
+  variance = "constant",
+  garch_order = c(1, 1),
+  lambda = NULL,
   lower = 0,
   upper = 1,
+  distribution = "norm",
   sampling = NULL,
+  init_garch = "unconditional",
+  sample_n = 10,
+  top_n = 1,
   ...
 )
 }
 \arguments{
 \item{y}{an xts vector.}
 
-\item{slope}{(Logical) slope component.}
+\item{auto}{whether to use automatic model selection.}
 
-\item{slope_damped}{(Logical) slope dampening component.}
+\item{slope}{(Logical) slope component. If \dQuote{auto} is TRUE, then this can
+be a vector of size 2 with TRUE and FALSE.}
+
+\item{slope_damped}{(Logical) slope dampening component. If \dQuote{auto} is TRUE, then this can
+be a vector of size 2 with TRUE and FALSE.}
 
 \item{seasonal}{(Logical) seasonal component(s).}
 
-\item{seasonal_frequency}{vector of numeric seasonal frequencies. For 
-trigonometric this can be fractional, but must be integer for regular 
-seasonality.}
-
-\item{seasonal_type}{either trigonometric or regular. The latter currently 
-does not allow multiple seasonality.}
+\item{seasonal_frequency}{vector of numeric seasonal frequencies (can be fractional).}
 
 \item{seasonal_harmonics}{the number of harmonics per seasonal frequency for 
-the trigonometric type.}
+the trigonometric seasonality. If \dQuote{auto} is TRUE, this can be a list 
+with slots for each seasonal frequency listing the sequence of harmonics to test for each.}
 
 \item{ar}{AR order.}
 
@@ -48,42 +53,52 @@ the trigonometric type.}
 
 \item{xreg}{an xts matrix of external regressors.}
 
-\item{transformation}{a valid transformation for y from the \dQuote{tstransform} 
-function in the \dQuote{tsaux} package (currently box-cox or logit are available).}
+\item{variance}{either \dQuote{constant} or \dQuote{dynamic}. In the latter
+case a GARCH model will be used. For the automatic selection case, both can
+be provided as a vector.}
 
-\item{lambda}{the Box Cox lambda. If not NULL, then either a numeric value or NA 
-denoting automatic calculation.}
+\item{garch_order}{the order of the GARCH model (no automatic selection of
+GARCH order allowed).}
 
-\item{lower}{lower bound for the transformation.}
+\item{lambda}{the Box Cox lambda. If not NULL (no transformation), then 
+either a numeric value or NA denoting automatic estimation.}
 
-\item{upper}{upper bound for the transformation.}
+\item{lower}{lower bound for the transformation (defaults to 0).}
+
+\item{upper}{upper bound for the transformation (defaults to 1.5).}
+
+\item{distribution}{a choice of the Normal (\dQuote{norm}), Student (\dQuote{std})
+or Johnson's SU (\dQuote{jsu}) distributions. There is no choice for selecting
+multiple choices for automatic selection.}
 
 \item{sampling}{(optional) sampling frequency of the dataset. If NULL, will 
 try to identify from the timestamps of y. This is useful for plotting and 
 extending the timestamps in the prediction horizon.}
 
+\item{init_garch}{GARCH variance initialization method with options to use
+the \dQuote{unconditional} variance or a \dQuote{sample} of length \dQuote{sample_n}.}
+
+\item{sample_n}{the sample length to use if choosing to initialize the GARCH variance
+using the \dQuote{sample} method.}
+
+\item{top_n}{how many models to return from the top when using automatic model selection. 
+If this is equal to 1 then the best selected model based on lowest AIC will be returned 
+else a list of the top_n estimated models (based on AIC).}
+
 \item{...}{not used.}
 }
 \value{
-An object of class \dQuote{tsissm.spec} with the following slots:\cr
-\item{target}{A list with original data series, the data series index and the 
-sampling frequency}
-\item{slope}{A list with details about the slope state}
-\item{seasonal}{A list with details about the seasonal state}
-\item{xreg}{A list with details on the external regressors}
-\item{transform}{A list with details on the transformation}
-\item{arma}{A list with details on the ARMA state}
-\item{S}{A data.table with the vectorized state matrices}
-\item{dims}{A vector with dimensions and flags used in the estimation code}
-\item{parmatrix}{A data.table of the model parameters}
-\item{idmatrix}{A matrix with index information on the parameters}
+An object of class \dQuote{tsissm.spec} or \dQuote{tsissm.autospec}.
 }
 \description{
-Specifies an ISSM model prior to estimation.
+Specifies an ISSM model prior to estimation with option for automatic
+model selection.
 }
 \details{
 The specification object holds the information and data which is
-then passed to the maximum likelihood estimation routines.
+then passed to the maximum likelihood estimation routines. Depending on whether
+automatic selection is chosen, it will dispatch to the appropriate estimation
+routine.
 
 The specification performs some sanity checks on the arguments provided 
 and sets up the required state space matrices and parameters which are used in 

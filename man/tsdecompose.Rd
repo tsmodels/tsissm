@@ -4,11 +4,14 @@
 \alias{tsdecompose.tsissm.estimate}
 \alias{tsdecompose}
 \alias{tsdecompose.tsissm.predict}
+\alias{tsdecompose.tsissm.simulate}
 \title{Model Decomposition}
 \usage{
-\method{tsdecompose}{tsissm.estimate}(object, simplify = FALSE, ...)
+\method{tsdecompose}{tsissm.estimate}(object, simplify = FALSE, start = 1, ...)
 
-\method{tsdecompose}{tsissm.predict}(object, simplify = FALSE, ...)
+\method{tsdecompose}{tsissm.predict}(object, simplify = FALSE, start = 1, ...)
+
+\method{tsdecompose}{tsissm.simulate}(object, simplify = FALSE, start = 1, ...)
 }
 \arguments{
 \item{object}{an object of class \dQuote{tsissm.estimate} or \dQuote{tsissm.predict}}
@@ -17,8 +20,13 @@
 and slope (if present) into a Trend component, all Seasonal components, all 
 ARMA components and the error terms into an Irregular component. This may be 
 useful when bagging  is carried out (assuming equal lambda in the box-cox 
-transform or the logit transform is used). This also simplifies the ability 
-to created custom overrides of the Trend and rebuilt the predictive distribution.}
+transform). This also simplifies the ability to created custom overrides of 
+the Trend and rebuilt the predictive distribution.}
+
+\item{start}{whether to return the predicted states from t=1 to h or the
+states from t=0 to (h-1). The latter is sometimes useful as the sum of the
+states equals the predicted value (since the predictions are based on the lagged
+state).}
 
 \item{...}{not currently used.}
 }
@@ -34,7 +42,7 @@ parts (states).
 }
 \details{
 The 1-step ahead prediction is given by the following equation:
-\deqn{y_{t} = x_{t-1} w + \varespsilon_{t}} 
+\deqn{y_{t} = x_{t-1} w + \varepsilon_{t}} 
 Because the decomposition pre lags the states so that the seed state is aligned 
 with the error term, then summing the state distribution of each component with 
 the returned error distribution will ensure that the exact same predicted 

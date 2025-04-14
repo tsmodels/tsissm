@@ -6,16 +6,10 @@
 \alias{tsissm-package}
 \title{tsissm: Linear Innovations State Space Unobserved Components Model}
 \description{
-Unobserved Components Model using the Linear Innovation State Space representation.
+Unobserved components time series model using the linear innovations state space representation (single source of error) with choice of error distributions and option for dynamic variance. Methods for estimation using automatic differentiation, automatic model selection and ensembling, prediction, filtering, simulation and backtesting. Based on the model described in Hyndman et al (2012) <10.1198/jasa.2011.tm09771>.
 }
 \author{
-\strong{Maintainer}: Alexios Galanos \email{alexios@4dscape.com}
-
-Other contributors:
-\itemize{
-  \item James Nesbit \email{jmcgnesbit@gmail.com} [contributor]
-  \item Keith O'Hara \email{kth.ohr@gmail.com} [contributor]
-}
+\strong{Maintainer}: Alexios Galanos \email{alexios@4dscape.com} (\href{https://orcid.org/0009-0000-9308-0457}{ORCID})
 
 }
 \keyword{internal}

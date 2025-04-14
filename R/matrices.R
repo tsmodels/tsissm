@@ -169,7 +169,7 @@ ss_slope <- function(slope = TRUE, damped_slope = FALSE, frequency = 1, type = "
     if (ar > 1) f0 <- rbind(f0, matrix(0, nrow = ar - 1, ncol = 1))
     if (ma > 0) f0 <- rbind(f0, matrix(0, nrow = 1L, ncol = 1L))
     if (ma > 1) f0 <- rbind(f0, matrix(0, nrow = ma - 1, ncol = 1))
-    if (damped_slope){
+    if (damped_slope) {
         phi <- NA
         w_names <- "phi"
     } else {
@@ -496,7 +496,7 @@ ss_matrices <- function(y, slope = TRUE, damped_slope = FALSE, frequency = 1, ty
     Smatrix[k ,1] <- ifelse(include_xreg, NCOL(xreg), 0)
     Smatrix[k ,2] <- 1
     Smatrix[k ,3] <- NCOL(xreg)
-    D <- c("m" = NROW(F0), "n" = length(y), "s" = ifelse(frequency[1] > 1, ifelse(type == "trigonometric", 1, 2), 0))
+    D <- c(NROW(F0), length(y))
     if (frequency[1] > 1) {
         seasonal_start <- Smatrix[which(grepl("Seasonal",rownames(Smatrix)))[1],2]
         seasonal_end <- Smatrix[max(which(grepl("Seasonal",rownames(Smatrix)))),3]
@@ -506,6 +506,7 @@ ss_matrices <- function(y, slope = TRUE, damped_slope = FALSE, frequency = 1, ty
     }
     arma_n <- ar + ma
     D <- c(D, seasonal_start, seasonal_end, arma_n, NCOL(xreg))
+    names(D) <- c("states","timesteps","seasonal_start","seasonal_end","arma","xreg")
     setup <- rbind(
         data.table(matrix = "F0", values = as.numeric(F0), pars = NA),
         data.table(matrix = "F1", values = as.numeric(F1), pars = p1),

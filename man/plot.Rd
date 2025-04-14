@@ -11,7 +11,7 @@
 
 \method{plot}{tsissm.simulate}(x, y = NULL, ...)
 
-\method{plot}{tsissm.profile}(x, y = NULL, type = c("metrics", "coef"), ...)
+\method{plot}{tsissm.profile}(x, y = NULL, type = c("coef", "mape", "mase", "crps"), ...)
 }
 \arguments{
 \item{x}{an object of class \dQuote{tsissm.estimate}, \dQuote{tsissm.simulate}

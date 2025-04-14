@@ -1,0 +1,524 @@
+---
+title: "The Innovations State Space Model"
+author: "Alexios Galanos"
+date: "`r Sys.Date()`"
+output: 
+    pdf_document:
+        citation_package: natbib
+        includes:
+          keep_tex: yes
+        number_sections: yes
+        toc: yes
+        toc_depth: 3
+urlcolor: PineGreen
+toccolor: PineGreen
+bibliography: references.bib
+bibliography-style: apalike
+natbiboptions: round
+vignette: >
+  %\VignetteIndexEntry{The Innovations State Space Model}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+library(knitr)
+```
+
+\section{Introduction}\label{sec:introduction}
+
+The `tsissm` package implements the linear innovations state space model described by @deLivera2011^[Originally proposed by @Anderson2012] and incorporating trigonometric seasonality as used in the `tbats` function from the `forecast` package of @Forecast. However, `tsissm` differs significantly in both implementation and features. Key enhancements include:
+
+1. **Automatic differentiation and robust inference**:  
+   Estimation leverages automatic differentiation (autodiff), with multiple sandwich estimators available for standard error calculation. System forecastability and ARMA constraints 
+   are handled correctly via the [nloptr](https://CRAN.R-project.org/package=nloptr) solver using autodiff-based Jacobians.
+
+2. **Flexible error distributions**:  
+   In addition to Gaussian errors, the model supports heavy-tailed and skewed alternatives, including the Student's $t$ distribution and the Johnson's SU distribution.
+
+3. **Heteroscedasticity modeling**:  
+   Conditional heteroscedasticity is supported via a GARCH specification on the innovation variance.
+
+4. **Automatic model selection and ensembling**:  
+   Users may select the best model based on an information criterion (e.g., AIC or BIC) or retain the top $N$ models for ensembling. This feature is also available in the `backtest` method, providing a more robust approach to evaluation and forecasting.
+
+5. **Simulated predictive distributions**:  
+   The `predict` method always returns a simulated forecast distribution, alongside the analytic mean, allowing for richer uncertainty quantification.
+
+6. **Handling of missing data**:  
+   Missing values in the response variable are permitted and automatically handled via the state space formulation.
+
+7. **Support for external regressors**:  
+   Regressors are supported in both the mean and variance equations.^[A future enhancement may incorporate regularization.]
+
+
+\section{Model Formulation}\label{sec:model}
+
+Consider the following Single Error Model (SEM) with trigonometric seasonality:
+
+\begin{equation}
+\begin{aligned}
+y_t^{(\lambda)}  &= {\bf{w'}}{{\bf{x}}_{t - 1}} + \bf{c'}\bf{u}_{t - 1}  + {\varepsilon _t}, \quad \varepsilon_t\sim N\left(0,\sigma^2\right),\\
+{{\bf{x}}_t} &= {\bf{F}}{{\bf{x}}_{t - 1}} + {\bf{g}}{\varepsilon _t},
+\end{aligned}
+\label{eq:tsissm1}
+\end{equation}
+
+where $\lambda$ represents the Box Cox parameter, $\bf{w}$ the observation coefficient 
+vector, $\bf{x}_t$ the unobserved state vector, and $\bf{c}$ a vector of coefficients 
+on the external regressor set $\bf{u}$.^[In the package, it is expected that the regression matrix is already pre-lagged.] 
+
+Define the state vector^[The following equations apply for the case when all components are present (level, slope, seasonal and ARMA).] as:
+
+\begin{equation}
+\bf{x}_t = {\left( {{l_t},{b_t},s_t^{(1)},\dots,s_t^{(T)},{d_t},{d_{t - 1}},\dots,{d_{t - p - 1}},{\varepsilon_t},{\varepsilon_{t - 1}},\dots,{\varepsilon _{t - q - 1}}} \right)^\prime },
+\label{eq:tsissm2}
+\end{equation}
+
+where $\bf{s}_t^{(i)}$ is the row vector $\left( {s_{1,t}^{(i)},s_{2,t}^{(i)},\dots,s_{{k_i},t}^{(i)},s_{1,t}^{*(i)},s_{2,t}^{*(i)},\dots,s_{{k_i},t}^{*(i)}} \right)$ for the trigonometric seasonality. 
+Also define $\bf{1}_r$ and $\bf{0}_r$ as a vector of ones and zeros, respectively, of length $r$, $\bf{O}_{u,v}$ a $u\times v$ matrix of zeros and $\bf{I}_{u,v}$ a $u\times v$ diagonal matrix of ones; let $\mathbf{\gamma}  = \left(\mathbf{\gamma}^{(1)},\dots,\mathbf{\gamma}^{(T)} \right)$ be a vector of seasonal parameters with ${\gamma ^{(i)}} = \left( {\gamma _1^{(i)}{{\bf{1}}_{{k_i}}},\gamma _2^{(i)}{{\bf{1}}_{{k_i}}}} \right)$ (with $k$ harmonics); $\theta  = \left( {{\theta_1},{\theta_2},\dots,{\theta _p}} \right)$ and $\psi  = \left( {{\psi _1},{\psi _2},\dots,{\psi_q}} \right)$ as the vector of AR(p) and MA(q) parameters, respectively.
+The observation transition vector ${\bf{w}} = {\left( {1,\phi ,{\bf{a}},\theta ,\psi } \right)^\prime }$, where ${\bf{a}} = \left( {{{\bf{a}}^{(1)}},\dots,{{\bf{a}}^{(T)}}} \right)$ with ${{\bf{a}}^{(i)}} = \left( {{{\bf{1}}_{{k_i}}},{{\bf{0}}_{{k_i}}}} \right)$. The state error adjustment vector ${\bf{g}} = {\left( {\alpha ,\beta ,\gamma ,1,{{\bf{0}}_{p - 1}},1,{{\bf{0}}_{q - 1}}} \right)^\prime }$. 
+Further, let ${\bf{B}} = \gamma '\theta$, ${\bf{C}} = \gamma '\psi$ and ${\bf{A}} =  \oplus _{i = 1}^T{{\bf{A}}_i}$, with 
+
+\begin{equation}
+{{\bf{A}}_i} = \left[ {\begin{array}{*{20}{c}}
+{{{\bf{C}}^{(i)}}}&{{{\bf{S}}^{(i)}}}\\
+{ - {{\bf{S}}^{(i)}}}&{{{\bf{C}}^{(i)}}}
+\end{array}} \right],
+\label{eq:tsissm3}
+\end{equation}
+
+and with $\bf{C}^{(i)}$ and $\bf{S}^{(i)}$ representing the $k_i\times k_i$ diagonal matrices with elements $cos(\lambda_j^{(i)})$ and $sin(\lambda_j^{(i)})$^[$\lambda$ here should not be confused with the Box Cox lambda.] respectively.^[For $j=1,\dots,k_i$ and $i=1,\dots,T$, representing the number of harmonics $k$ per seasonal period $i$.]
+
+Finally, the state transition matrix $\bf{F}$ is composed as follows:
+
+\begin{equation}
+{\bf{F}} = \left[ {\begin{array}{*{20}{c}}
+1&\phi &{{{\bf{0}}_\tau }}&{\alpha \theta }&{\alpha \psi }\\
+0&\phi &{{{\bf{0}}_\tau }}&{\beta \theta }&{\beta \psi }\\
+{{{{\bf{0'}}}_\tau }}&{{{{\bf{0'}}}_\tau }}&{\bf{A}}&{\bf{B}}&{\bf{C}}\\
+0&0&{{{\bf{0}}_\tau }}&\theta &\psi \\
+{{{{\bf{0'}}}_{p - 1}}}&{{{{\bf{0'}}}_{p - 1}}}&{{{\bf{O}}_{p - 1,\tau }}}&{{{\bf{I}}_{p - 1,p}}}&{{{\bf{O}}_{p - 1,q}}}\\
+0&0&{{{\bf{0}}_\tau }}&{{{\bf{0}}_p}}&{{{\bf{0}}_q}}\\
+{{{{\bf{0'}}}_{q - 1}}}&{{{{\bf{0'}}}_{q - 1}}}&{{{\bf{O}}_{q - 1,\tau }}}&{{{\bf{O}}_{q - 1,p}}}&{{{\bf{I}}_{q - 1,q}}}
+\end{array}} \right]
+\label{eq:tsissm5}
+\end{equation}
+
+where $\tau  = 2\sum\limits_{i = 1}^T {{k_i}}$. The model has the feature of allowing for multiple seasonal trigonometric components.
+
+
+\section{State Initialization}\label{sec:init}
+
+A key innovation of the @deLivera2011 paper is in providing the exact initialization of the 
+non-stationary component's seed states, the exponential smoothing analogue of the @deJong1991 
+method for augmenting the Kalman filter to handle seed states with infinite variances. 
+The proof, based on @deLivera2011 and expanded here is as follows, let:
+
+\begin{equation}
+{\bf{D}} = {\bf{F}} - {\bf{gw'}}.
+\label{eq:tsissm6}
+\end{equation}
+
+
+We eliminate $\varepsilon_t$ in \ref{eq:tsissm1} to give:
+
+\begin{equation}
+{\bf{x}}_t = \bf{D}{\bf{x}_{t - 1}} + \bf{g}{y_t}.
+\label{eq:tsissm7}
+\end{equation}
+
+Next, we proceed by backsolving the equation for the error, given a given 
+value of $\lambda$:^[For simplicity of exposition, $y_t$ is equivalent to $y_t^{(\lambda)}$.]
+
+\begin{equation}
+\begin{array}{l}
+{\varepsilon_t} = {y_t} - {\bf{w}}{{{\bf{\hat x}}}_{t - 1}},\\
+{\varepsilon_t} = {y_t} - {\bf{w'}}\left({{\bf{D}}{{{\bf{\hat x}}}_{t - 2}} + {\bf{g}}{y_{t - 1}}}\right).
+\end{array}
+\label{eq:tsissm8}
+\end{equation}
+
+Starting with $t = 4$ and working backwards:
+
+\begin{equation}
+\begin{array}{rl}
+{\varepsilon_4} &= {y_4} - {\bf{w'}}\left({\bf{D}}{{{\bf{\hat x}}}_2} + {\bf{g}}{y_3} \right)\\
+&= {y_4}-{\bf{w'}}\left({{\bf{D}}\left({\bf{D}}{{{\bf{\hat x}}}_1} + {\bf{g}}{y_2} \right) + {\bf{g}}{y_3}} \right)\\
+&= {y_4}-{\bf{w'}}\left({{\bf{D}}\left({{\bf{D}}\left( {{\bf{D}}{{{\bf{\hat x}}}_0} + {\bf{g}}{y_1}} \right) + {\bf{g}}{y_2}} \right) + {\bf{g}}{y_3}} \right)\\
+&= {y_4}-{\bf{w'}}\left({{\bf{D}}\left({{\bf{D}}^2}{{\bf{x}}_0} + {\bf{Dg}}{y_1} + {\bf{g}}{y_2}\right) + {\bf{g}}{y_3}} \right)\\
+&= {y_4}-{\bf{w'}}\left({{\bf{D}}^3}{{\bf{x}}_0} + {{\bf{D}}^2}{\bf{g}}{y_1} + {\bf{Dg}}{y_2} + {\bf{g}}{y_3}\right)\\
+&= {y_4}-{\bf{w'}}\sum\limits_{j = 1}^3 {{\bf{D}}^{j - 1}}{\bf{g}}{y_{4 - j}} - {\bf{w'}}{{\bf{D}}^3}{{\bf{x}}_0}\\
+\end{array}
+\label{eq:tsissm9}
+\end{equation}
+
+and generalizing to $\varepsilon_t$:
+
+\begin{equation}
+\begin{array}{rl}
+{\varepsilon_t} &= {y_t} - {\bf{w'}}\left( {\sum\limits_{j = 1}^{t - 1} {{{\bf{D}}^{j - 1}}{\bf{g}}{y_{t - j}}} } \right) - {\bf{w'}}{{\bf{D}}^{t - 1}}{{\bf{x}}_0}\\
+ &= {y_t} - {\bf{w'}}{{{\bf{\tilde x}}}_{t - 1}} - {{{\bf{w'}}}_{t - 1}}{{\bf{x}}_0}\\
+ &= {{\tilde y}_t} - {{{\bf{w'}}}_{t - 1}}{{\bf{x}}_0},
+\end{array}
+\label{eq:tsissm10}
+\end{equation}
+
+where ${{\tilde y}_t} = {y_t} - {\bf{w'}}{{{\bf{\tilde x}}}_{t - 1}}$, ${{{\bf{\tilde x}}}_t} = {\bf{D}}{{{\bf{\tilde x}}}_{t - 1}} + {\bf{g}}{y_t}$, ${{{\bf{w'}}}_t} = {\bf{D}}{{{\bf{w'}}}_{t - 1}}$, ${{{\bf{\tilde x}}}_0} = 0$ and ${{{\bf{w'}}}_0} = {\bf{w'}}$, so that $\bf{x}_0$ are the coefficients from the regression of $\bf{w}$ on $\boldsymbol{\varepsilon}$. The way this is implemented, is to calculate the seed states based on the initial parameter vector 
+and $\lambda$ parameter and then use those same seed states without re-calculating during the optimization. However, when $\lambda$ is 
+also part of the parameter estimation set, we have chosen instead to re-calculate the seed state during the optimization as part of the 
+autodiff tape. This differs from the approach adopted in the `forecast` package of @Forecast which simply re-transforms the initial seed states
+based on the value of $\lambda$ during estimation.
+
+\section{Constraints}\label{sec:constraints}
+
+A number of constraints are implemented during estimation, including a system forecastability constraint
+and a constraint on the ARMA parameters when present.
+
+\subsection{System Forecastability Constraint}
+
+The forecastability constraint necessitates that the characteristic roots of the matrix 
+$D$ (see \eqref{eq:tsissm6}) lie within the unit circle, which means that the maximum 
+of the modulus of the eigenvalues of D are less than 1. In the `forecast` package this constraint 
+is directly checked and returns Inf when the condition is violated which is a type of 
+infinite penalty method. It is known that this type of approach can lead to numerical 
+instabilities and discontinuities as well as difficulties in convergence, though it 
+often "works" in practice to some degree. Instead, in the `tsissm` package, we model the 
+constraint using [RTMB](https://cran.r-project.org/package=RTMB)^[RTMB
+instead of TMB was used for the constraint due to issues discussed [here](https://groups.google.com/g/tmb-users/c/4HEEbKCCScs).]
+to obtain the autodiff based Jacobian of the constraint and pass the output to the `nloptr` 
+solver using the `eval_g_ineq` and `eval_jac_g_ineq` arguments. Specifically, in order to 
+avoid the use of the non-differentiable $max$ operator, we impose that the modulus of all the 
+eigenvalues is less than 1 and the Jacobian is then a $C \times N$ matrix where $C$ are 
+the constraints and $N$ the number of parameters.^[In practice we could have just imposed 
+the constraint on the first eigenvalue, but since D is non-symmetric, we have no *guarantees*, 
+from what I have read, that the LAPACK routine (`dgeev`) will always return the eigenvalues 
+in decreasing order by modulus.]
+
+\subsection{ARMA Constraint}
+
+It is typical to check for stationarity in the AR component and invertibility in
+the MA component when those are present, by solving for the characteristic roots
+of the system polynomials. In R, one way to solve for this is to use the 
+`polyroot` function such that `Mod(polyroot(c(1, -ar)))` and `Mod(polyroot(c(1, ma)))`
+are greater than 1. In the `forecast` package this is how they are checked and an 
+infinite penalty applied, similar to the system forecastability constraint. 
+As in our previous approach, we instead code this up to make use of automatic 
+differentiation in order to obtain a reasonable set of constraints and their Jacobians.
+
+Consider an autoregressive (AR) model specified by the polynomial
+
+\begin{equation}
+1 - a_1 z - a_2 z^2 - \cdots - a_n z^n = 0.
+\end{equation}
+
+The stationarity condition requires that the roots $z$ of this polynomial satisfy $|z| > 1.$
+
+
+That is, the roots must lie outside the unit circle.
+
+\medskip
+
+\textbf{Step 1: Rewriting in Monic Form}
+
+Multiply the equation by $-1$ to obtain:
+
+\begin{equation}
+-1 + a_1 z + a_2 z^2 + \cdots + a_n z^n = 0.
+\end{equation}
+
+Rearrange this as:
+
+\begin{equation}
+a_n z^n + a_{n-1} z^{n-1} + \cdots + a_1 z - 1 = 0.
+\end{equation}
+
+Dividing through by $a_n$ (assuming $a_n \neq 0$) yields the monic polynomial:
+
+\begin{equation}
+z^n + \frac{a_{n-1}}{a_n} z^{n-1} + \cdots + \frac{a_1}{a_n} z - \frac{1}{a_n} = 0.
+\end{equation}
+
+\medskip
+
+\textbf{Step 2: Constructing the Companion Matrix}
+
+For a monic polynomial
+
+\begin{equation}
+z^n + c_{n-1} z^{n-1} + \cdots + c_1 z + c_0 = 0,
+\end{equation}
+
+the standard companion matrix is defined as:
+
+\begin{equation}
+C = \begin{pmatrix}
+- c_{n-1} & - c_{n-2} & \cdots & - c_1 & - c_0 \\
+1 & 0 & \cdots & 0 & 0 \\
+0 & 1 & \cdots & 0 & 0 \\
+\vdots & \vdots & \ddots & \vdots & \vdots \\
+0 & 0 & \cdots & 1 & 0
+\end{pmatrix}.
+\end{equation}
+
+In our case, by comparing coefficients, we have:
+
+\begin{equation}
+c_{n-1} = \frac{a_{n-1}}{a_n},\quad c_{n-2} = \frac{a_{n-2}}{a_n},\quad \dots,\quad c_1 = \frac{a_1}{a_n},\quad c_0 = -\frac{1}{a_n}.
+\end{equation}
+
+Thus, the companion matrix becomes:
+
+\begin{equation}
+C = \begin{pmatrix}
+-\dfrac{a_{n-1}}{a_n} & -\dfrac{a_{n-2}}{a_n} & \cdots & -\dfrac{a_1}{a_n} & \dfrac{1}{a_n} \\
+1 & 0 & \cdots & 0 & 0 \\
+0 & 1 & \cdots & 0 & 0 \\
+\vdots & \vdots & \ddots & \vdots & \vdots \\
+0 & 0 & \cdots & 1 & 0
+\end{pmatrix}.
+\end{equation}
+
+\medskip
+
+\textbf{Step 3: Stationarity Constraint via the Companion Matrix}
+
+Since the eigenvalues of the companion matrix \( C \) are precisely the roots \( z \) of the polynomial
+
+\begin{equation}
+1 - a_1 z - a_2 z^2 - \cdots - a_n z^n = 0,
+\end{equation}
+
+the stationarity condition $|z| > 1$ can be reformulated in terms of the companion matrix as
+
+\begin{equation}
+|\lambda_i(C)| > 1 \quad \text{for } i = 1, \dots, n.
+\end{equation}
+
+That is, the moduli of the eigenvalues of the companion matrix must be greater than 1.
+A detailed exposition can be found in @Lutkepohl2005 (see Chapter 3).
+
+A similar constraint is imposed in the presence of an MA component, by flipping the
+sign of the coefficients. It should be noted that these constraints are only applied
+when the order of either the AR or MA components is greater than 1, else the normal
+parameter bounds ({-1, 1}) are sufficient.
+
+\section{Estimation}\label{sec:estimation}
+
+The estimation is carried out by minimizing the negative of the log-likelihood,
+subject to various constraints discussed in \ref{sec:constraints}, and parameter
+bounds. The log-likelihood (to be maximized), jointly with the Box-Cox transformation
+(parameter $\lambda$) is derived as follows:
+
+\begin{equation}
+\begin{aligned}
+p(y_t \mid x_0, \vartheta, \sigma^2)
+&= p\left(y_t^{(\lambda)} \mid x_0, \vartheta, \sigma^2\right)
+   \,\det\!\left(\frac{\partial y_t^{(\lambda)}}{\partial y}\right)\\
+&= p\left(y_t^{(\lambda)} \mid x_0, \vartheta, \sigma^2\right)
+   \,\prod_{t=1}^n y_t^{\lambda - 1}\\
+&= \ln p\left(y_t^{(\lambda)} \mid x_0, \vartheta, \sigma^2\right)
+   \;+\; (\lambda - 1) \sum_{t=1}^n \ln y_t.
+\end{aligned}
+\label{eq:loglik}
+\end{equation}
+
+where $p(\cdot)$ represents the probability density function, given the initial
+state observations $x_0$, the parameter vector $\theta$ and the variance $\sigma^2$.
+
+
+The Box-Cox transformation, represented by parameter $\lambda$ is a power transformation 
+applied to the dependent variable to stabilize its variance and to make its 
+distribution closer to normal. This adjustment often leads to improved model 
+estimation and inference. Since we are jointly estimating lambda, it is 
+necessary to adjust the likelihood by the Jacobian of the transformation, which 
+in the likelihood expression appears as the determinant term
+\[
+\det\!\left(\frac{\partial y_t^{(\lambda)}}{\partial y}\right),
+\]
+which is equivalently expressed as
+\[
+\prod_{t=1}^n y_t^{\lambda - 1}.
+\]
+This term scales the probability density correctly back to the original data 
+scale, ensuring that the transformation is properly accounted for during estimation. 
+Including the parameter \(\lambda\) in the estimation process allows the model 
+to choose the optimal transformation that best normalizes the data and stabilizes 
+its variance.
+
+Beyond the Gaussian distribution, the package also implements the Student's t and
+Johnson's SU, details of which can be found in the [tsdistributions](https://CRAN.R-project.org/package=tsdistributions)
+package. Additionally, the variance can follow GARCH dynamics such that:
+
+
+\begin{equation}
+\sigma^2_t =  \hat\sigma^2 \left(1 - P\right) + \sum\limits_{j=1}^{q} \alpha_j \varepsilon_{t-j}^2 +  \sum\limits_{j=1}^{p} \beta_j \sigma_{t-j}^2
+\label{eq:garch}
+\end{equation}
+
+where we impose a variance targeting intercept instead of estimating $\omega$, with $P$ being the persistence and $\hat\sigma^2$ the unconditional
+variance. Initialization of the recursion can either use the full information set or a subsample (for more details see the online documentation
+of [tsgarch](https://www.nopredict.com/packages/tsgarch)).
+
+The optimization is undertaken using the [nloptr](https://CRAN.R-project.org/package=nloptr) solver, making use of an autodiff based 
+gradient for the parameters and autodiff based jacobian for the constraints. The solver defaults to the use of the SQP variant, but
+other options are available via the `issm_control` function.
+
+In order to calculate sandwich estimators^[We make use of the [sandwich](https://CRAN.R-project.org/package=sandwich) 
+package by exporting `estfun` and `bread` methods.] for the standard errors, the scores (Jacobian) of the log-likelihood function
+need to be calculated. Due to the expense of this operation on large datasets, we have implemented asynchronous 
+evaluation which requires the use of a parallel worker set up using a [future](https://CRAN.R-project.org/package=future) plan.
+The user can also turn off the evaluation of scores, in which case the autodiff based Hessian is used for the calculation of the
+standard errors.
+
+
+\section{Prediction}\label{sec:prediction}
+
+The h-step ahead analytic mean and variance of the model, in the Box-Cox transformed space,
+are given by:
+
+\begin{equation}
+E\left(y_{n+h|n}^{(\lambda)}\right) = \mu_{t+h} = \mathbf{w}' \mathbf{F}^{h-1}\mathbf{x}_n
+\end{equation}
+
+\begin{equation}
+V\left(y_{n+h|n}^{(\lambda)}\right) = \sigma^2_{t+h} = 
+\begin{cases}
+\hat\sigma^2, & \text{if } h = 1, \\[6pt]
+\hat\sigma^2 \left[1 + \displaystyle\sum_{j=1}^{h-1} c_j^2 \right], & \text{if } h \geq 2.
+\end{cases}
+\end{equation}
+
+where $c_j = w'F^{j-1}g$. For the mean, a reasonable approximation in back-transformed space, 
+using a second-order Taylor expansion, is given by:
+
+\begin{equation}
+y_{t+h} =
+\left\{
+\begin{array}{ll}
+\exp(\mu_{t+h}) \left( 1 + \frac{\sigma^2_{t+h}}{2} \right), & \text{if } \lambda = 0, \\[8pt]
+(\lambda \mu_{t+h} + 1)^{\frac{1}{\lambda}} \left( 1 + \frac{\sigma^2_{t+h} (1-\lambda)}{2 (\lambda \mu_{t+h} + 1)^2} \right), & \text{if } \lambda \neq 0.
+\end{array}
+\right.
+\end{equation}
+
+For the variance in the back transformed space, one should use the simulated distribution to approximate this as 
+it was not possible to find a reasonable approximation, even using higher order Taylor expansions, which 
+would be good enough, particularly with increasing h.
+
+
+\section{Automatic Selection and Ensembling}
+
+The `forecast` package of @Forecast takes a smart, automated approach to identifying the best model from a set of candidate specifications—such as whether to include a slope, the number of harmonics, and the number of AR or MA terms.
+
+In contrast, the `tsissm` package supports **complete enumeration** of all model configurations, including multiple seasonalities and multiple harmonics per seasonal frequency. It also allows testing for constant versus dynamic variance, though only one distributional assumption can be tested at a time. Users can return either the best model based on an information criterion (AIC or BIC), or the top $N$ models ranked by the selected criterion. This flexibility enables **model ensembling** for filtering, prediction, and simulation.
+
+The backtesting function (`tsbacktest`) supports this functionality directly, allowing automatic selection of the top $N$ models. Three weighting schemes are available:
+
+- **User-supplied fixed weights.**
+- **AIC-based weights:**  
+  Models are weighted by the Akaike Information Criterion, favoring those with lower AIC:
+  $$
+  w_i = \frac{\exp(-0.5\, \Delta_i)}{\sum_{j} \exp(-0.5\, \Delta_j)}, \quad \text{where } \Delta_i = AIC_i - \min_j AIC_j.
+  $$
+- **BIC-based weights:**  
+  Similar to AIC-based weights, but using the Bayesian Information Criterion, which penalizes complexity more heavily.
+
+The final ensemble prediction is computed as a weighted average:
+$$
+\hat{y}_{\text{ensemble}} = \sum_{i} w_i\, \hat{y}_i,
+$$
+where $\hat{y}_i$ are individual model predictions and $w_i$ are the corresponding model weights. AIC-based weighting is typically preferred when models vary in complexity but are fit on the same dataset, whereas BIC-based weighting may be more appropriate for large sample sizes due to its stronger complexity penalty.
+
+---
+
+Beyond point forecasts, we also ensemble **simulated forecasts**, accounting for error dependencies across models. Rather than assuming independence, we explicitly model the dependence structure of model residuals using a **Gaussian copula**. This provides more accurate risk quantification, especially when the top $N$ models are highly correlated.
+
+First, the correlation of transformed residuals across retained models is computed using **Kendall’s tau**^[Because the transformed residuals may be in different scales (different Box-Cox $\lambda$), include outliers, etc, we adopt the approach of first calculating the dependence using Kendall's tau and then transform to Pearson's correlation.]. This is then converted into a correlation matrix $\mathbf{R}$ suitable for a Gaussian copula:
+$$
+R_{k\ell} = \sin\left( \frac{\pi}{2} \tau^{(k,\ell)} \right).
+$$
+
+From this, correlated quantile samples are drawn from a multivariate normal distribution and passed into the prediction function via the `innov` argument with `innov_type = "q"` (quantiles). These quantiles are then transformed back into residuals using each model's error distribution, allowing for simulated forecasts with cross-model error dependence.
+
+Formally, for each model $k = 1, \dots, K$, simulation $j$, and forecast horizon $i$, we define the simulation equations:
+
+$$
+\begin{aligned}
+y_{j,i}^{(k)} &= \left(x_{i-1}^{(k)}\right)^\top w^{(k)} + \left(X_i^{(k)}\right)^\top \kappa^{(k)} + E_{j,i}^{(k)} \\
+x_i^{(k)} &= F^{(k)} x_{i-1}^{(k)} + g^{(k)} E_{j,i}^{(k)}
+\end{aligned}
+$$
+
+The simulated error term $E_{j,i}^{(k)}$ is generated as:
+
+$$
+E_{j,i}^{(k)} = F_k^{-1} \left( \Phi\left(z_{j,i}^{(k)}\right) \right), \quad \text{where } \mathbf{z}_{j,i} \sim \mathcal{N}(\mathbf{0}, \mathbf{R}).
+$$
+
+Here:
+
+- $\Phi(\cdot)$ is the standard normal cumulative distribution function (CDF),
+- $F_k^{-1}(\cdot)$ is the quantile function (inverse CDF) of the error distribution for model $k$,
+- $z_{j,i}^{(k)}$ is the $k$-th element of the multivariate Gaussian sample,
+- $\mathbf{R}$ is the copula correlation matrix derived from Kendall's tau between model residuals.
+
+This approach preserves both marginal error distributions and cross-model error dependence in simulation-based forecasting.
+
+
+\clearpage
+
+\section{Methods and Functions}\label{sec:methods}
+
+Table \ref{table:workflows} provides a summary of the methods
+and functions implemented in the package by input specification.
+
+\begin{table}[ht]
+\begin{footnotesize}
+\centering
+\caption{Workflow of ISSM Package Methods by Specification Type}
+\begin{tabular}{|p{3cm}|p{3cm}|p{5cm}|p{3cm}|}
+\hline
+\textbf{Step} & \textbf{Specification Type} & \textbf{Operation} & \textbf{Resulting Object/Class} \\ \hline
+\multicolumn{4}{|l|}{\textbf{Manual Specification (auto = FALSE)}} \\ \hline
+Model Specification & Manual (auto = FALSE) & \texttt{issm\_modelspec(auto = FALSE)} & \texttt{tsissm.spec} \\ \hline
+Estimation & Manual (auto = FALSE) & \texttt{estimate()} & \texttt{tsissm.estimate} \\ \hline
+Backtesting & Manual (auto = FALSE) & \texttt{tsbacktest()} & Backtest output \\ \hline
+\multicolumn{4}{|l|}{\textbf{Automatic Specification (top\_n = 1)}} \\ \hline
+Model Specification & Auto (top\_n = 1) & \texttt{issm\_modelspec(auto = TRUE, top\_n = 1)} & \texttt{tsissm.autospec} \\ \hline
+Estimation & Auto (top\_n = 1) & \texttt{estimate()} & \texttt{tsissm.estimate} \\ \hline
+Diagnostics \& Summary & Auto (top\_n = 1) & \multicolumn{1}{|p{5cm}|}{\texttt{summary(), AIC(), BIC(), estfun(), bread(), residuals(),}} & Diagnostic outputs \\ 
+& & \multicolumn{1}{|p{5cm}|}{\texttt{fitted(), tsdecompose(), tsmetrics(), vcov(), sigma(), logLik(),}} & \\ 
+& & \multicolumn{1}{|p{5cm}|}{\texttt{coef(), hresiduals(), tsequation(), tsdiagnose(), plot(), tsmoments(),}} & \\ 
+& & \multicolumn{1}{|p{5cm}|}{\texttt{tsprofile()}} & \\ \hline
+Filtering & Auto (top\_n = 1) & \texttt{tsfilter()} & Updated \texttt{tsissm.estimate} \\ \hline
+Prediction \& Simulation & Auto (top\_n = 1) & \texttt{predict()} \& \texttt{simulate()} & \texttt{tsissm.predict} and \texttt{tsissm.simulate} \\ \hline
+Prediction Diagnostics & Auto (top\_n = 1) & \texttt{tsmetrics(), plot(), tsdecompose()} & Prediction diagnostic outputs \\ \hline
+\multicolumn{4}{|l|}{\textbf{Automatic Specification (top\_n $>$ 1)}} \\ \hline
+Model Specification & Auto (top\_n $>$ 1) & \texttt{issm\_modelspec(auto = TRUE, top\_n = 2)} & \texttt{tsissm.autospec} \\ \hline
+Estimation & Auto (top\_n $>$ 1) & \texttt{estimate()} & \texttt{tsissm.selection} \\ \hline
+Filtering & Auto (top\_n $>$ 1) & \texttt{tsfilter()} & Updated \texttt{tsissm.selection} \\ \hline
+Prediction \& Simulation & Auto (top\_n $>$ 1) & \texttt{predict()} \& \texttt{simulate()} & \texttt{tsissm.selection\_predict} and \texttt{tsissm.selection\_simulate} \\ \hline
+Backtesting & Auto (top\_n $>$ 1) & \texttt{tsbacktest()} & Backtest output \\ \hline
+Selection Diagnostics & Auto (top\_n $>$ 1) & \texttt{AIC(), BIC(), logLik(), tsensemble()} & Diagnostic and ensemble outputs \\ \hline
+\end{tabular}
+\label{table:workflows}
+\end{footnotesize}
+\end{table}
+
+\section{Conclusion}\label{sec:conclusion}
+
+The tsissm package makes use of the methods implemented in tsmethods and shared 
+across all packages in the tsmodels framework. It provides an enhanced version
+of the `tbats` implementation in [@Forecast], based on suggestions in [@Hyndman2008].
+A number of demo vignettes are provided showcasing the functionality of the
+package, and longer demos are available at [nopredict.com](https://www.nopredict.com/packages/tsissm).
+
+Future work may look at regularization of regressors, automatic anomaly handing 
+and revision of the still experimental vector ETS (tsvets) package.
+
+\clearpage

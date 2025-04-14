@@ -18,87 +18,110 @@
 #' should be initialized. See the simulate documentation for more details.
 #' @param trace whether to show the progress bar. The user is expected to have
 #' set up appropriate handlers for this using the \dQuote{progressr} package.
-#' @param sigma_scale a scaling factor for the innovations standard deviation.
-#' @param solver choice of solver to use for the estimation of the paths.
-#' @param autodiff whether to use automatic differentiation for estimation.
-#' This makes use of the tsissmad package.
 #' @param ... not currently used.
 #' @note The function can use parallel functionality as long as the user has set
 #' up a \code{\link[future]{plan}} using the future package.
+#' The simulated states are checked for positivity and any paths which have negative
+#' values are excluded. If more than half of the paths have negative values then
+#' an error is raised and the function will stop.
 #' @return An object of class \dQuote{tsissm.profile}.
 #' @aliases tsprofile
 #' @method tsprofile tsissm.estimate
 #' @rdname tsprofile
 #' @export
 #'
-tsprofile.tsissm.estimate <- function(object, h = 1, nsim = 100, seed = NULL, trace = FALSE, sigma_scale = 1, solver = "nlminb", autodiff = TRUE, ...)
+tsprofile.tsissm.estimate <- function(object, h = 1, nsim = 100, seed = NULL, trace = FALSE, ...)
 {
-    if (object$spec$seasonal$include_seasonal & object$spec$seasonal$seasonal_type == "regular") {
-        if (autodiff) {
-            autodiff <- FALSE
-            warning("\nautodiff only currently supported for trigonometric seasonality (switching to non autodiff)")
-        }
-    }
-    sim <- simulate(object, seed = seed, nsim = nsim, h = length(object$spec$target$y_orig) + h, sigma_scale = sigma_scale)
-    profile <- profile_fun(sim$Simulated, object, h, trace = trace, solver = solver, autodiff = autodiff)
-    profile$sigma <- sim$sigma * sim$sigma_scale
+    sim <- simulate(object, seed = seed, nsim = nsim, h = length(object$spec$target$y_orig) + h)
+    sim <- .check_positivity(sim)
+    if (is.null(sim)) return(sim)
+    profile <- profile_fun(sim$distribution, object, h = h, control = NULL, trace = trace)
     class(profile) <- "tsissm.profile"
     return(profile)
 }
 
-profile_fun <- function(sim, object, h, trace, solver, autodiff)
+profile_fun <- function(sim, object, h, control, trace)
 {
-
+    Horizon <- Simulation <- NULL
     if (trace) {
         prog_trace <- progressor(nrow(sim))
     }
+    tic <- Sys.time()
     date_class <- attr(object$spec$target$sampling, "date_class")
     date_fun <- match.fun(paste0("as.",date_class))
-    prof %<-% future_lapply(1:nrow(sim), function(i) {
+    prof <- future_lapply(1:nrow(sim), function(i) {
         if (trace) prog_trace()
         parameters <- NULL
         y <- xts(sim[i,], date_fun(colnames(sim)))
         yin <- y[1:(nrow(y) - h)]
-        spec <- tsspec(object, yin, lambda = object$parmatrix[parameters == "lambda"]$optimal)
+        spec <- tsspec(object, yin)
         # add try catch
-        mod <- try(estimate(spec, solver = solver, autodiff = autodiff), silent = TRUE)
+        mod <- try(estimate(spec, control = control, scores = FALSE), silent = TRUE)
         if (inherits(mod, 'try-error')) {
-            return(list(L1 = NULL, L2 = NULL))
+            return(list(L1 = NULL, L2 = NULL, L3 = NULL))
+        }
+        if (mod$opt$status < 0) {
+            return(list(L1 = NULL, L2 = NULL, L3 = NULL))
         }
         p <- predict(mod, h = h)
         L1 <- data.table("Variable" = names(coef(mod)), "Value" = coef(mod), "Simulation" = i)
         L2 <- data.table("Predicted" = as.numeric(p$mean), "Actual" = as.numeric(tail(y, h)), "Simulation" = i, "Horizon" = 1:h)
-        return(list(L1 = L1, L2 = L2))
-    }, future.packages = c("tsmethods","tsissm","xts","data.table"), future.seed = TRUE)
+        L3 <- p
+        # L3 <- p$distribution
+        return(list(L1 = L1, L2 = L2, L3 = L3))
+    }, future.packages = c("tsmethods","tsissm","xts","data.table","tsaux"), future.seed = TRUE)
     prof <- eval(prof)
+    toc <- Sys.time()
+    dtime <- difftime(toc, tic, units = "secs")
+    if (trace) {
+        print(paste0("\nCompleted Profiling in ", round(as.numeric(dtime),2)," secs."))
+        print(paste0("\nCompiling Performance Metrics..."))
+    }
     C <- rbindlist(lapply(1:length(prof), function(i) prof[[i]]$L1))
     M <- rbindlist(lapply(1:length(prof), function(i) prof[[i]]$L2))
-
-    Actual <- NULL
-    Predicted <- NULL
-    Simulation <- NULL
-    # create distribution for all performance metrics
-    maped <- M[,list(MAPE = mape(Actual, Predicted)), by = c("Horizon","Simulation")]
-    maped <- dcast(maped, Simulation~Horizon, value.var = "MAPE")
-    maped[,Simulation := NULL]
-    maped <- as.matrix(maped)
-    class(maped) <- "tsmodel.distribution"
-    attr(maped, "date_class") <- "numeric"
-
-    biasd <- M[,list(Bias = bias(Actual, Predicted)), by = c("Horizon","Simulation")]
-    biasd <- dcast(biasd, Simulation~Horizon, value.var = "Bias")
-    biasd[,Simulation := NULL]
-    biasd <- as.matrix(biasd)
-    class(biasd) <- "tsmodel.distribution"
-    attr(biasd, "date_class") <- "numeric"
-
-    mslred <- M[,list(MSLRE = mslre(Actual, Predicted)), by = c("Horizon","Simulation")]
-    mslred <- dcast(mslred, Simulation~Horizon, value.var = "MSLRE")
-    mslred[,Simulation := NULL]
-    mslred <- as.matrix(mslred)
-    class(mslred) <- "tsmodel.distribution"
-    attr(mslred, "date_class") <- "numeric"
-
-    L <- list(MAPE = maped, BIAS = biasd, MSLRE = mslred, coef = C, true.coef = coef(object))
+    
+    # Metrics
+    Actual <- Predicted <- Simulation <- NULL
+    MAPE <- M[,list(MAPE = mape(Actual, Predicted)), by = c("Simulation","Horizon")]
+    BIAS <- M[,list(BIAS = bias(Actual, Predicted)), by = c("Simulation","Horizon")]
+    MASE <- lapply(1:length(prof), function(i){
+        ans <- M[Simulation == i, list(MASE = mase(Actual, Predicted,  prof[[i]]$L3$original_series, frequency = object$spec$seasonal$seasonal_frequency[1])), by = "Horizon"]
+        ans[,Simulation := as.integer(i)]
+        ans <- ans[,list(Simulation, Horizon, MASE)]
+        return(ans)
+    })
+    MASE <- rbindlist(MASE)
+    CRPS <- lapply(1:length(prof), function(i){
+        d <- lapply(1:h, function(j){
+            ans <- crps(M[Simulation == i & Horizon %in% (1:j)]$Actual, prof[[i]]$L3$distribution[,1:j,drop = FALSE])
+            data.table(Simulation = as.integer(i), Horizon = as.integer(j), CRPS = ans)
+        })
+        rbindlist(d)
+    })
+    CRPS <- rbindlist(CRPS)
+    M <- M[,list(Simulation, Horizon, Actual, Predicted)]
+    L <- list(coef = C, true_coef = coef(object), Predictions = M, MAPE = MAPE, MASE = MASE, CRPS = CRPS)
+    class(L) <- "tsissm.profile"
     return(L)
 }
+
+
+.check_positivity <- function(sim) {
+    if (any(sim$distribution < 0)) {
+        exc <- sort(unique(which(sim$distribution < 0, arr.ind = TRUE)[,1]))
+        n <- length(exc)
+        if (n > (NROW(sim$distribution)/2)) {
+            warning("\nmore than half of the simulated paths have negative values. Exiting and returning NULL.")
+            return(NULL)
+        }
+        # exclude negative paths
+        sim$distribution <- sim$distribution[-exc, , drop = FALSE]
+        sim$Error <- sim$Error[-exc, , drop = FALSE]
+        sim$states <- sim$states[-exc]
+        return(sim)
+    } else {
+        return(sim)
+    }
+}
+
+
