@@ -1,5 +1,7 @@
 
-[![R-CMD-check](https://github.com/tsmodels/tsissm/workflows/R-CMD-check/badge.svg)](https://github.com/tsmodels/tsissm/actions)
+# tsissm <img src="man/figures/logo.png" align="right" height="139" alt="" />
+
+[![R-CMD-check](https://github.com/tsmodels/tsissm/actions/workflows/rcmdcheck.yaml/badge.svg)](https://github.com/tsmodels/tsissm/actions/workflows/rcmdcheck.yaml)
 [![Last-changedate](https://img.shields.io/badge/last%20change-2025--04--14-yellowgreen.svg)](/commits/master)
 [![packageversion](https://img.shields.io/badge/Package%20version-1.0.0-orange.svg?style=flat-square)](commits/master)
 [![CRAN_Status_Badge](https://www.r-pkg.org/badges/version/tsissm)](https://cran.r-project.org/package=tsissm)
