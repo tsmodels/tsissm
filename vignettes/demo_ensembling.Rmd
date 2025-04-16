@@ -23,6 +23,7 @@ library(knitr)
 library(tsissm)
 library(xts)
 library(tsaux)
+library(future)
 library(data.table)
 library(zoo)
 ```
@@ -74,6 +75,7 @@ evaluation and select the top 4 models for ensembling.
 ```{r}
 train <- y["/2022"]
 test <- y["2023/"]
+plan("sequential")
 lambda_pre_estimate <- box_cox(lambda = NA)$transform(train) |> attr("lambda")
 xreg <- auto_regressors(train, frequency = 12, lambda = lambda_pre_estimate, sampling = "months", h = 26, method = "sequential", 
                         check.rank = TRUE, discard.cval = 3.5, maxit.iloop = 10, maxit.oloop = 10, 
@@ -113,7 +115,7 @@ mod$correlation |> kable()
 The object returned by `estimate()` when top_n > 1 is of class `tsissm.selection`. 
 This class supports `tsfilter()`, `predict()`, and `simulate()` methods, which 
 apply operations to each retained model, returning individual results. These can 
-then be ensembled using the tsensemble() function.
+then be ensembled using the `tsensemble()` function.
 
 Below, we generate forecasts from the top model and from all 4 models, 
 and then ensemble them using equal weights:

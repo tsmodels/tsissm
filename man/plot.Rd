@@ -23,6 +23,9 @@ or \dQuote{tsissm.profile}.}
 
 \item{type}{type of profile plot for objects of class \dQuote{tsissm.profile}.}
 }
+\value{
+different plots depending on the input class.
+}
 \description{
 Plots for objects generated from the tsissm functions.
 }

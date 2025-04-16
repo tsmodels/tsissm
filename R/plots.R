@@ -6,6 +6,7 @@
 #' @param y not used.
 #' @param type type of profile plot for objects of class \dQuote{tsissm.profile}.
 #' @param ... additional arguments passed to the underlying plot function.
+#' @returns different plots depending on the input class.
 #' @aliases plot
 #' @method plot tsissm.estimate
 #' @rdname plot

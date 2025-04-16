@@ -450,7 +450,7 @@ tmb_inputs_issm_dynamic <- function(spec)
     hess_fun <- function(pars, fun, issmenv)
     {
         names(pars) <- issmenv$tmb_names
-        fun$he(pars)
+        fun$he(pars, atomic = TRUE)
     }
     
     init_v <- spec$variance$init_variance
@@ -583,7 +583,7 @@ tmb_inputs_issm_constant <- function(spec)
     hess_fun <- function(pars, fun, issmenv)
     {
         names(pars) <- issmenv$tmb_names
-        fun$he(pars)
+        fun$he(pars, atomic = TRUE)
     }
     
     if (spec$parmatrix[parameters == "lambda"]$estimate == 1) {

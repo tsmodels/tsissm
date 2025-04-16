@@ -365,7 +365,7 @@ variance. Initialization of the recursion can either use the full information se
 of [tsgarch](https://www.nopredict.com/packages/tsgarch)).
 
 The optimization is undertaken using the [nloptr](https://CRAN.R-project.org/package=nloptr) solver, making use of an autodiff based 
-gradient for the parameters and autodiff based jacobian for the constraints. The solver defaults to the use of the SQP variant, but
+gradient for the parameters and autodiff based Jacobian for the constraints. The solver defaults to the use of the SQP variant, but
 other options are available via the `issm_control` function.
 
 In order to calculate sandwich estimators^[We make use of the [sandwich](https://CRAN.R-project.org/package=sandwich) 

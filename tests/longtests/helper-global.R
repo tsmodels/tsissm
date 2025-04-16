@@ -15,10 +15,9 @@ dynamic_benchmark <-  c("alpha" = 0.2794620879, "beta" = 0.0009843874, "gamma12.
                         "LogLik" = -4270.23)
 
 spec_bc_benchmark <- issm_modelspec(y, slope = TRUE, seasonal = TRUE, seasonal_frequency = 12, seasonal_harmonics = 5, lambda = NA)
-spec_bc_benchmark$parmatrix[parameters == "lambda", initial := 0.1773974]
 mod_bc_benchmark <- estimate(spec_bc_benchmark)
-bc_benchmark <-  c("alpha" = 4.034174894e-01, "beta" = 4.010118934e-08, "gamma12.1" = -1.083547953e-02, 
-                   "gamma12.2" = 1.444199458e-02, lambda = 1.272051337e-01, "sigma" = 0.1349176, "LogLik" = -4165.158)
+bc_benchmark <-  c("alpha" = 0.2140389701, "beta" = 0.1152212311, "gamma12.1" = 0.0004977683, 
+                   "gamma12.2" = 0.0022594349, "lambda" = 0.1773974450, "sigma" = 0.2927909, "LogLik" = -4220.628)
 
 spec_auto <- issm_modelspec(y, auto = TRUE, slope = c(TRUE, FALSE), seasonal = TRUE, seasonal_frequency = 12, seasonal_harmonics = list(c(5)), top_n = 2)
 mod_auto <- estimate(spec_auto)

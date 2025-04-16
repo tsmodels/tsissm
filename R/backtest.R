@@ -32,7 +32,7 @@
 #' @note The function can use parallel functionality as long as the user has
 #' set up a \code{\link[future]{plan}} using the future package. Model ensembling
 #' is used when the input object is of class \dQuote{tsissm.autospec} and
-#' top_n is greter than 1. The following weighting schemes are available:
+#' top_n is greeter than 1. The following weighting schemes are available:
 #' \describe{
 #'   \item{U:}{User supplied fixed weights.}
 #'   \item{AIC:}{Models are weighted based on their Akaike Information Criterion (AIC), 

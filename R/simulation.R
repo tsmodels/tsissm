@@ -164,6 +164,14 @@ simulate.tsissm.estimate <- function(object, nsim = 1, seed = NULL, h = 1, newxr
     colnames(ysim) <- as.character(sim_dates)
     class(ysim) <- "tsmodel.distribution"
     attr(ysim, "date_class") <- date_class
+    
+    
+    E <- E[,-1, drop = FALSE]
+    colnames(E) <- as.character(sim_dates)
+    attr(E, "date_class") <- date_class
+    class(E) <- "tsmodel.distribution"
+    
+    
     xspec <- object$spec
     xspec$parmatrix <- object$parmatrix
     zList <- list(distribution = ysim, Error = E, dates = as.character(sim_dates),
@@ -230,8 +238,8 @@ simulate.tsissm.estimate <- function(object, nsim = 1, seed = NULL, h = 1, newxr
     }
     newxreg <- rbind(matrix(0, ncol = ncol(newxreg), nrow = 1), newxreg)
     
-    res <- object$model$error[-1]
-    garch_sigma <- object$model$sigma[-1]
+    res <- object$model$error
+    garch_sigma <- object$model$sigma
     omega <- object$model$target_omega
     z_res <- res/garch_sigma
     skew <- object$parmatrix[parameters == "skew"]$value
@@ -310,12 +318,12 @@ simulate.tsissm.estimate <- function(object, nsim = 1, seed = NULL, h = 1, newxr
     xspec$parmatrix <- object$parmatrix
     
     E <- f$Error
-    E <- E[,-1]
+    E <- E[,-1, drop = FALSE]
     colnames(E) <- as.character(sim_dates)
     attr(E, "date_class") <- date_class
     class(E) <- "tsmodel.distribution"
     
-    sigma <- f$sigma[,-1]
+    sigma <- f$sigma[,-1, drop = FALSE]
     colnames(sigma) <- as.character(sim_dates)
     attr(sigma, "date_class") <- date_class
     class(sigma) <- "tsmodel.distribution"
