@@ -35,7 +35,7 @@ The `tsissm` package implements the linear innovations state space model describ
 
 1. **Automatic differentiation and robust inference**:  
    Estimation leverages automatic differentiation (autodiff), with multiple sandwich estimators available for standard error calculation. System forecastability and ARMA constraints 
-   are handled correctly via the [nloptr](https://CRAN.R-project.org/package=nloptr) solver using autodiff-based Jacobians.
+   are handled exactly via the [nloptr](https://CRAN.R-project.org/package=nloptr) solver using autodiff-based Jacobians.
 
 2. **Flexible error distributions**:  
    In addition to Gaussian errors, the model supports heavy-tailed and skewed alternatives, including the Student's $t$ distribution and the Johnson's SU distribution.
@@ -58,6 +58,15 @@ The `tsissm` package implements the linear innovations state space model describ
 
 \section{Model Formulation}\label{sec:model}
 
+Given an initial state vector of unobserved components (such as level, slope, and seasonality), 
+the proposed model evolves the states over time using a linear transition equation, 
+incorporating the effect of the most recent observation error. At each time step, 
+the observed (Box-Cox transformed) value is modeled as a linear combination of the 
+previous state, lagged external regressors, and a normally^[In our formulation we relax this to allow for other choices as well.] distributed 
+random error. This structure allows the model to capture complex patterns in the 
+data—such as trends, seasonal cycles, and the influence of exogenous variables—while 
+dynamically updating its internal state based on new information.
+
 Consider the following Single Error Model (SEM) with trigonometric seasonality:
 
 \begin{equation}
@@ -71,6 +80,8 @@ y_t^{(\lambda)}  &= {\bf{w'}}{{\bf{x}}_{t - 1}} + \bf{c'}\bf{u}_{t - 1}  + {\var
 where $\lambda$ represents the Box Cox parameter, $\bf{w}$ the observation coefficient 
 vector, $\bf{x}_t$ the unobserved state vector, and $\bf{c}$ a vector of coefficients 
 on the external regressor set $\bf{u}$.^[In the package, it is expected that the regression matrix is already pre-lagged.] 
+
+
 
 Define the state vector^[The following equations apply for the case when all components are present (level, slope, seasonal and ARMA).] as:
 
