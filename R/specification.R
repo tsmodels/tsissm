@@ -560,17 +560,21 @@ distribution_init_pars <- function(res, spec) {
     distribution <- spec$distribution$type
     if (distribution != "norm") {
         spec <- distribution_modelspec(na.omit(res), distribution = distribution)
-        mod <- estimate(spec)
-        cf <- coef(mod)
+        mod <- try(estimate(spec, use_hessian = FALSE), silent = TRUE)
+        if (inherits(mod,'try-error')) {
+            cf <- c("skew" = 1, "shape" = ifelse(distribution == "std", 4.1, 2.1))
+        } else {
+            cf <- coef(mod)
+        }
         if (distribution == "std") {
             skew <- 0
-            shape <- coef(mod)["shape"]
+            shape <- cf["shape"]
             tmp <- rbind(
                 data.table(parameters = "skew", initial = skew, lower = 0, upper = 0, estimate = 0, scale = 1, group = "distribution", equation = "[D]", symbol = "\\zeta"),
                 data.table(parameters = "shape", initial = shape, lower = 2.01, upper = 100, estimate = 1, scale = 1, group = "distribution", equation = "[D]", symbol = "\\nu"))
         } else if (distribution == "jsu") {
-            skew <- coef(mod)["skew"]
-            shape <- coef(mod)["shape"]
+            skew <- cf["skew"]
+            shape <- cf["shape"]
             tmp <- rbind(
                 data.table(parameters = "skew", initial = skew, lower = -20, upper = 20, estimate = 1, scale = 1, group = "distribution", equation = "[D]", symbol = "\\zeta"),
                 data.table(parameters = "shape", initial = shape, lower = 0.1, upper = 100, estimate = 1, scale = 1, group = "distribution", equation = "[D]", symbol = "\\nu"))
@@ -583,6 +587,7 @@ distribution_init_pars <- function(res, spec) {
     }
     return(tmp)
 }
+
 
 lambda_init <- function(y, frequency = 1)
 {
