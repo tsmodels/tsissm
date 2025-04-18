@@ -124,10 +124,17 @@ tsensemble.tsissm.selection_simulate <- function(object, weights = NULL, start =
 
 .ensemble_decompose <- function(object, start = 1)
 {
-    out <- future_lapply(1:length(object$models), function(i){
-        tsdecompose(object$models[[i]], start = start)
-    }, future.seed = TRUE, future.packages = "tsissm")
-    out <- eval(out)
+    n_cores <- nbrOfWorkers()
+    if (n_cores <= 1) {
+        out <- lapply(1:length(object$models), function(i){
+            tsdecompose(object$models[[i]], start = start)
+        })
+    } else {
+        out <- future_lapply(1:length(object$models), function(i){
+            tsdecompose(object$models[[i]], start = start)
+        }, future.seed = TRUE, future.packages = "tsissm")
+        out <- eval(out)
+    }
     return(out)
 }
 
