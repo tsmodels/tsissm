@@ -341,12 +341,21 @@ predict.tsissm.selection <- function(object, h = 12, newxreg = NULL, nsim = 1000
     # sample correlated quantiles from a copula
     cop <- normalCopula(P2p(C), dim = NCOL(C), dispstr = "un")
     U <- rCopula(h * nsim, cop)
-    out <- future_lapply(1:length(object$models), function(i){
-        r <- matrix(U[,i], nrow = nsim, ncol = h)
-        predict(object$models[[i]], h = h, newxreg = newxreg, nsim = nsim, forc_dates = forc_dates, innov = r, innov_type = "q",
-                init_states = init_states, ...)
-    }, future.seed = TRUE, future.packages = c("tsissm","xts"))
-    out <- eval(out)
+    n_cores <- nbrOfWorkers()
+    if (n_cores <= 1) {
+        out <- lapply(1:length(object$models), function(i){
+            r <- matrix(U[,i], nrow = nsim, ncol = h)
+            predict(object$models[[i]], h = h, newxreg = newxreg, nsim = nsim, forc_dates = forc_dates, innov = r, innov_type = "q",
+                    init_states = init_states, ...)
+        })
+    } else {
+        out <- future_lapply(1:length(object$models), function(i){
+            r <- matrix(U[,i], nrow = nsim, ncol = h)
+            predict(object$models[[i]], h = h, newxreg = newxreg, nsim = nsim, forc_dates = forc_dates, innov = r, innov_type = "q",
+                    init_states = init_states, ...)
+        }, future.seed = TRUE, future.packages = c("tsissm","xts"))
+        out <- eval(out)
+    }
     L <- list(models = out, table = object$table, correlation = object$correlation)
     class(L) <- c("tsissm.selection_predict")
     return(L)
