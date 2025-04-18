@@ -57,5 +57,7 @@ then the Augmented Lagrange with MMA local solver is used which is slower but
 may be more reliable.\cr
 For the automatic selection estimation, this will benefit from the use of multiple
 processes which can be set up with a \code{\link[future]{plan}}. For progress
-tracing, use \code{\link[progressr]{handlers}}.
+tracing, use \code{\link[progressr]{handlers}}. The function will check for
+number of parallel workers initialized (using \sQuote{nbrOfWorkers}), and if 
+it finds only 1 then will revert to non-parallel execution of the code.
 }

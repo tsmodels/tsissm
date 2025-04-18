@@ -25,8 +25,9 @@ log_parameters <- function(pars, file = "~/parameters.txt") {
 #' may be more reliable.\cr
 #' For the automatic selection estimation, this will benefit from the use of multiple
 #' processes which can be set up with a \code{\link[future]{plan}}. For progress
-#' tracing, use \code{\link[progressr]{handlers}}.
-#' 
+#' tracing, use \code{\link[progressr]{handlers}}. The function will check for
+#' number of parallel workers initialized (using \sQuote{nbrOfWorkers}), and if 
+#' it finds only 1 then will revert to non-parallel execution of the code.
 #' @returns An object of class \dQuote{tsissm.estimate} or \dQuote{tsissm.selection}.
 #' In the case of automatic model selection an object of class \dQuote{tsissm.estimate} 
 #' will be returned based on AIC (minimum) if \dQuote{top_n} is 1, else an object of
@@ -104,6 +105,7 @@ estimate.tsissm.autospec <- function(object, control = NULL, trace = FALSE, ...)
     y <- object$y
     top_n <- object$top_n
     n <- NROW(args_grid)
+    n_cores <- nbrOfWorkers()
     if (trace) {
         tmp_tic <- Sys.time()
         tmp_spec <- issm_modelspec(y, slope = args_grid[1,"slope"], slope_damped = args_grid[1,"slope_damped"], seasonal = args_grid[1,"seasonal"], 
@@ -113,30 +115,48 @@ estimate.tsissm.autospec <- function(object, control = NULL, trace = FALSE, ...)
         tmp_mod <- try(estimate(tmp_spec, control = control, scores = FALSE), silent = TRUE)
         tmp_toc <- Sys.time() - tmp_tic    
         est_time_one <- tmp_toc
-        n_cores <- nbrOfWorkers()
         estimated_time <- round(as.numeric(est_time_one/n_cores) * NROW(args_grid), 2) %/% 60
         print(paste0("no. of models to evaluate: ", NROW(args_grid)))
         print(paste0("estimated evaluation time (mins): ", estimated_time))
         prog_trace <- progressor(n)
     }
     tic <- Sys.time()
-    b <- future_lapply(1:n, function(i) {
-        if (trace) prog_trace()
-        iter <- NULL
-        spec <- issm_modelspec(y, slope = args_grid[i,"slope"], slope_damped = args_grid[i,"slope_damped"], seasonal = args_grid[i,"seasonal"], 
-                              seasonal_frequency = seasonal_frequency, seasonal_harmonics = as.numeric(args_grid[i,grepl("^Seasonal",gnames)]), 
-                              ar = args_grid[i,"ar"], ma = args_grid[i,"ma"], xreg = xreg, lambda = lambda, lower = lower, 
-                              upper = upper, sampling = sampling, variance = args_grid[i,"variance"], distribution = distribution)
-        mod <- try(estimate(spec, control = control, scores = FALSE), silent = TRUE)
-        if (inherits(mod, 'try-error')) {
-            tab <- data.table(iter = i, lambda = as.numeric(NA), AIC = as.numeric(NA), MAPE = as.numeric(NA))
-        } else {
-            tab <- data.table(iter = i, lambda = mod$parmatrix[parameters == "lambda"]$value, AIC = AIC(mod), MAPE = mape(y, fitted(mod)))
-        }
-        out <- list(model = mod, table = tab)
-        return(out)
-    }, future.seed = TRUE, future.packages = c("tsmethods","xts","tsissm","data.table"))
-    b <- eval(b)
+    if (n_cores <= 1) {
+        b <- lapply(1:n, function(i) {
+            if (trace) prog_trace()
+            iter <- NULL
+            spec <- issm_modelspec(y, slope = args_grid[i,"slope"], slope_damped = args_grid[i,"slope_damped"], seasonal = args_grid[i,"seasonal"], 
+                                   seasonal_frequency = seasonal_frequency, seasonal_harmonics = as.numeric(args_grid[i,grepl("^Seasonal",gnames)]), 
+                                   ar = args_grid[i,"ar"], ma = args_grid[i,"ma"], xreg = xreg, lambda = lambda, lower = lower, 
+                                   upper = upper, sampling = sampling, variance = args_grid[i,"variance"], distribution = distribution)
+            mod <- try(estimate(spec, control = control, scores = FALSE), silent = TRUE)
+            if (inherits(mod, 'try-error')) {
+                tab <- data.table(iter = i, lambda = as.numeric(NA), AIC = as.numeric(NA), MAPE = as.numeric(NA))
+            } else {
+                tab <- data.table(iter = i, lambda = mod$parmatrix[parameters == "lambda"]$value, AIC = AIC(mod), MAPE = mape(y, fitted(mod)))
+            }
+            out <- list(model = mod, table = tab)
+            return(out)
+        })
+    } else {
+        b <- future_lapply(1:n, function(i) {
+            if (trace) prog_trace()
+            iter <- NULL
+            spec <- issm_modelspec(y, slope = args_grid[i,"slope"], slope_damped = args_grid[i,"slope_damped"], seasonal = args_grid[i,"seasonal"], 
+                                   seasonal_frequency = seasonal_frequency, seasonal_harmonics = as.numeric(args_grid[i,grepl("^Seasonal",gnames)]), 
+                                   ar = args_grid[i,"ar"], ma = args_grid[i,"ma"], xreg = xreg, lambda = lambda, lower = lower, 
+                                   upper = upper, sampling = sampling, variance = args_grid[i,"variance"], distribution = distribution)
+            mod <- try(estimate(spec, control = control, scores = FALSE), silent = TRUE)
+            if (inherits(mod, 'try-error')) {
+                tab <- data.table(iter = i, lambda = as.numeric(NA), AIC = as.numeric(NA), MAPE = as.numeric(NA))
+            } else {
+                tab <- data.table(iter = i, lambda = mod$parmatrix[parameters == "lambda"]$value, AIC = AIC(mod), MAPE = mape(y, fitted(mod)))
+            }
+            out <- list(model = mod, table = tab)
+            return(out)
+        }, future.seed = TRUE, future.packages = c("tsmethods","xts","tsissm","data.table"))
+        b <- eval(b)
+    }
     toc <- Sys.time()
     dtime <- difftime(toc, tic, units = "mins")
     tab <- lapply(b, function(x) x$table)
