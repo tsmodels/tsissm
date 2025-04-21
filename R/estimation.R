@@ -69,6 +69,7 @@ estimate.tsissm.spec <- function(object, control = issm_control(algorithm = "SLS
         f$tmb <- opt$tmb
         f$opt <- opt$solver_out
     }
+    f$status <- opt$solver_out$status
     f$score_promise <- opt$scores
     f$elapsed <- difftime(Sys.time(), tic, units = "mins")
     f$hessian <- opt$hessian

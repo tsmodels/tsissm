@@ -60,7 +60,7 @@ profile_fun <- function(sim, object, h, control, trace)
         if (inherits(mod, 'try-error')) {
             return(list(L1 = NULL, L2 = NULL, L3 = NULL))
         }
-        if (mod$opt$status < 0) {
+        if (mod$status < 0) {
             return(list(L1 = NULL, L2 = NULL, L3 = NULL))
         }
         p <- predict(mod, h = h)

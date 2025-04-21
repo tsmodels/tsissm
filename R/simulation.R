@@ -113,7 +113,7 @@ simulate.tsissm.estimate <- function(object, nsim = 1, seed = NULL, h = 1, newxr
             colnames(newxreg) <- colnames(object$spec$xreg$xreg)
         }
     }
-    newxreg <- rbind(matrix(0, ncol = ncol(newxreg), nrow = 1), newxreg)
+    newxreg <- rbind(matrix(0, ncol = ncol(newxreg), nrow = 1), coredata(newxreg))
     
     res <- object$model$error[-1]
     sigma_res <- object$model$sigma
@@ -236,7 +236,7 @@ simulate.tsissm.estimate <- function(object, nsim = 1, seed = NULL, h = 1, newxr
             colnames(newxreg) <- colnames(object$spec$xreg$xreg)
         }
     }
-    newxreg <- rbind(matrix(0, ncol = ncol(newxreg), nrow = 1), newxreg)
+    newxreg <- rbind(matrix(0, ncol = ncol(newxreg), nrow = 1), coredata(newxreg))
     
     res <- object$model$error
     garch_sigma <- object$model$sigma

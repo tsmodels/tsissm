@@ -82,6 +82,11 @@ tsbacktest.tsissm.spec <- function(object, start = floor(length(object$target$y_
 {
     parameter <- b <- forecast_dates <- NULL
     data <- xts(object$target$y_orig, object$target$index)
+    
+    if (start > NROW(data)) stop("\nstart is greater than length of data")
+    if (end > NROW(data)) stop("\nend is greater than length of data")
+    
+    
     if (object$xreg$include_xreg) {
         use_xreg <- TRUE
         xreg <- xts(object$xreg$xreg, object$target$index)

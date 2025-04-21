@@ -505,10 +505,11 @@ init_res <- function(y, spec) {
         } else {
             B <- box_cox(lambda = lambda)
             yt <- B$transform(y, frequency = seasonal_frequency)
-            res <- try(residuals(arima(yt, order = c(1,1,2), seasonal = list(order = c(1, 1, 1), period = seasonal_frequency))), silent = TRUE)
+            if (seasonal_frequency > 1) slist <- c(0,0,0) else slist <- c(1,1,1)
+            res <- try(residuals(arima(yt, order = c(1,1,2), seasonal = list(order = slist, period = seasonal_frequency))), silent = TRUE)
         }
         if (inherits(res,'try-error')) {
-            res <- residuals(tslinear(yt, trend = TRUE, seasonal = TRUE, frequency = seasonal_frequency))
+            res <- residuals(tslinear(yt, trend = TRUE, seasonal = ifelse(seasonal_frequency>1, TRUE, FALSE), frequency = seasonal_frequency))
         }
     }
     res <- as.numeric(res)
