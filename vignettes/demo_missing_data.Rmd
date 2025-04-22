@@ -122,7 +122,7 @@ co2_full <- co2_full[,-1]
 ```
 
 This new dataset now spans a regular daily grid. The percentage increase in data 
-points (mostly NA) is: `r print(paste0(round(100 * (NROW(co2_full)/NROW(co2) - 1),0), "%"))` more data points which are all missing values.
+points (mostly NA) is: `r paste0(round(100 * (NROW(co2_full)/NROW(co2) - 1),0), "%")` more data points which are all missing values.
 
 ## Re-estimating with Regularized Calendar Time
 

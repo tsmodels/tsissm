@@ -67,13 +67,13 @@ par(opar)
 
 ## Model Selection
 
-For this demonstration, we reserve the last 26 months of data for forecasting 
+For this demonstration, we reserve the last 38 months of data for forecasting 
 evaluation and select the top 4 models for ensembling.
 
 
 ```{r}
-train <- y["/2022"]
-test <- y["2023/"]
+train <- y["/2021"]
+test <- y["2022/"]
 lambda_pre_estimate <- box_cox(lambda = NA)$transform(train) |> attr("lambda")
 xreg <- auto_regressors(train, frequency = 12, lambda = lambda_pre_estimate, sampling = "months", h = 26, method = "sequential", 
                         check.rank = TRUE, discard.cval = 3.5, maxit.iloop = 10, maxit.oloop = 10, 
@@ -119,8 +119,8 @@ Below, we generate forecasts from the top model and from all 4 models,
 and then ensemble them using equal weights:
 
 ```{r}
-p_top <- mod$models[[1]] |> predict(h = nrow(test), seed = 100, nsim = 2000, newxreg = xreg$xreg[index(test),])
-p_all <- mod |> predict(h = nrow(test), seed = 100, nsim = 2000, newxreg = xreg$xreg[index(test),])
+p_top <- mod$models[[1]] |> predict(h = nrow(test), seed = 200, nsim = 4000, newxreg = xreg$xreg[index(test),])
+p_all <- mod |> predict(h = nrow(test), seed = 200, nsim = 4000, newxreg = xreg$xreg[index(test),])
 p_ensemble <- p_all |> tsensemble(weights = rep(1/4,4))
 ```
 

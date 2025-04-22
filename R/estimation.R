@@ -1,7 +1,3 @@
-log_parameters <- function(pars, file = "~/parameters.txt") {
-    write.table(matrix(pars, nrow = 1), file = file, append = TRUE, sep = ",", col.names = FALSE, row.names = FALSE)
-}
-
 #' Model Estimation
 #'
 #' @description Estimates a model given a specification object using
@@ -584,7 +580,6 @@ tmb_inputs_issm_constant <- function(spec)
     valid_index <- which(good > 0) - 1
     # create function for ARMA and non ARMA models
     llh_fun <- function(pars, fun, issmenv) {
-        log_parameters(pars, file = "~/parameters.txt")
         names(pars) <- issmenv$tmb_names
         lik <- fun$fn(pars)
         if (is.na(lik) | !is.finite(lik)) {

@@ -14,6 +14,7 @@ Unobserved components time series model using the linear innovations state space
 Useful links:
 \itemize{
   \item \url{https://github.com/tsmodels/tsissm}
+  \item \url{https://www.nopredict.com/packages/tsissm}
 }
 
 }
