@@ -17,8 +17,9 @@
 \item{seed}{an object specifying if and how the random number generator
 should be initialized. See the simulate documentation for more details.}
 
-\item{trace}{whether to show the progress bar. The user is expected to have
-set up appropriate handlers for this using the \dQuote{progressr} package.}
+\item{trace}{whether to show the progress bar and additionally output verbose messages. 
+The user is expected to have set up appropriate handlers for this using 
+the \code{\link[progressr]{handlers}} function from the \dQuote{progressr} package.}
 
 \item{...}{not currently used.}
 }

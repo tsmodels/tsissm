@@ -6,7 +6,8 @@
 #' @param control solver control parameters passed to the nloptr function.
 #' @param scores whether to calculate the analytic scores (Jacobian) of the
 #' likelihood. This is not available for the \dQuote{tsissm.autospec} object.
-#' @param trace whether to show a progress bar for the automatic selection object.
+#' @param trace whether to show a progress bar for the automatic selection object
+#' and also output verbose messages.
 #' @param debug_mode for development testing, will include the TMB object.
 #' @param ... not used.
 #' @details The maximum likelihood estimation for this model is described in the 

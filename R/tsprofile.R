@@ -16,8 +16,9 @@
 #' @param nsim the number of paths to generate.
 #' @param seed an object specifying if and how the random number generator
 #' should be initialized. See the simulate documentation for more details.
-#' @param trace whether to show the progress bar. The user is expected to have
-#' set up appropriate handlers for this using the \dQuote{progressr} package.
+#' @param trace whether to show the progress bar and additionally output verbose messages. 
+#' The user is expected to have set up appropriate handlers for this using 
+#' the \code{\link[progressr]{handlers}} function from the \dQuote{progressr} package.
 #' @param ... not currently used.
 #' @note The function can use parallel functionality as long as the user has set
 #' up a \code{\link[future]{plan}} using the future package.

@@ -28,7 +28,8 @@ likelihood. This is not available for the \dQuote{tsissm.autospec} object.}
 
 \item{...}{not used.}
 
-\item{trace}{whether to show a progress bar for the automatic selection object.}
+\item{trace}{whether to show a progress bar for the automatic selection object
+and also output verbose messages.}
 }
 \value{
 An object of class \dQuote{tsissm.estimate} or \dQuote{tsissm.selection}.
