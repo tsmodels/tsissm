@@ -15,9 +15,10 @@
 \item{...}{not currently used.}
 }
 \value{
-A list of tables (printed out and returned invisibly) with
-Ljung-Box test for residual autocorrelation, parameter and model bounds
-diagnostics and outlier dates using the Rosner test (\code{\link[EnvStats]{rosnerTest}}).
+A list of tests including the weighted Ljung-Box test for residual 
+autocorrelation, system forecastability test, and outlier dates using the 
+Rosner test (\code{\link[EnvStats]{rosnerTest}}). Optionally generates a plot
+of relevant diagnostics.
 }
 \description{
 Creates a short summary of model based diagnostics.

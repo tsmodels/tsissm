@@ -53,7 +53,7 @@ The `tsissm` package implements the linear innovations state space model describ
    Missing values in the response variable are permitted and automatically handled via the state space formulation.
 
 7. **Support for external regressors**:  
-   Regressors are supported in both the mean and variance equations.^[A future enhancement may incorporate regularization.]
+   Regressors are supported in the mean.^[A future enhancement may incorporate regularization.]
 
 
 \section{Model Formulation}\label{sec:model}

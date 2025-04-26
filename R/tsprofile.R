@@ -74,8 +74,8 @@ profile_fun <- function(sim, object, h, control, trace)
     toc <- Sys.time()
     dtime <- difftime(toc, tic, units = "secs")
     if (trace) {
-        print(paste0("\nCompleted Profiling in ", round(as.numeric(dtime),2)," secs."))
-        print(paste0("\nCompiling Performance Metrics..."))
+        cat(paste0("\nCompleted Profiling in ", round(as.numeric(dtime),2)," secs."))
+        cat(paste0("\nCompiling Performance Metrics..."))
     }
     C <- rbindlist(lapply(1:length(prof), function(i) prof[[i]]$L1))
     M <- rbindlist(lapply(1:length(prof), function(i) prof[[i]]$L2))

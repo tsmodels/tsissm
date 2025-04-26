@@ -19,6 +19,10 @@
 
 \item{...}{not currently used.}
 }
+\value{
+a data.frame of performance metrics including MAPE, MSLRE, BIAS and AIC
+for the estimate object and MAPE, MSLRE, BIAS, MASE, MIS and CRPS for predict object.
+}
 \description{
 Performance metrics from an estimated or predicted tsissm model.
 }

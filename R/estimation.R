@@ -113,8 +113,8 @@ estimate.tsissm.autospec <- function(object, control = NULL, trace = FALSE, ...)
         tmp_toc <- Sys.time() - tmp_tic    
         est_time_one <- tmp_toc
         estimated_time <- round(as.numeric(est_time_one/n_cores) * NROW(args_grid), 2) %/% 60
-        print(paste0("no. of models to evaluate: ", NROW(args_grid)))
-        print(paste0("estimated evaluation time (mins): ", estimated_time))
+        cat(paste0("no. of models to evaluate: ", NROW(args_grid)))
+        cat(paste0("estimated evaluation time (mins): ", estimated_time))
         prog_trace <- progressor(n)
     }
     tic <- Sys.time()

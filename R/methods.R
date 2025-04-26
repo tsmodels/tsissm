@@ -5,6 +5,7 @@
 #' @description Extract the fitted values from an estimated model.
 #' @param object an object of class \dQuote{tsissm.estimate}.
 #' @param ... not currently used.
+#' @returns an xts object of the fitted values.
 #' @aliases fitted
 #' @method fitted tsissm.estimate
 #' @rdname fitted
@@ -941,6 +942,8 @@ BIC.tsissm.selection <- function(object, ...)
 #' @param actual the actual data matched to the dates of the forecasts.
 #' @param alpha the coverage level for distributional forecast metrics.
 #' @param ... not currently used.
+#' @returns a data.frame of performance metrics including MAPE, MSLRE, BIAS and AIC
+#' for the estimate object and MAPE, MSLRE, BIAS, MASE, MIS and CRPS for predict object.
 #' @aliases tsmetrics
 #' @method tsmetrics tsissm.predict
 #' @rdname tsmetrics
@@ -979,21 +982,8 @@ tsmetrics.tsissm.estimate <- function(object, ...)
     MAPE <- mape(object$spec$target$y_orig, fitted(object))
     BIAS <- bias(object$spec$target$y_orig, fitted(object))
     MSLRE <- mslre(object$spec$target$y_orig, fitted(object))
-    # yt <- object$spec$transform$transform(object$spec$target$y_orig, lambda = lambda)
-    # ft <- object$spec$transform$transform(as.numeric(fitted(object)), lambda = lambda)
-    # r <- yt - ft
-    cat("\ntsissm: Performance Metrics")
-    cat("\n----------------------------------\n")
-    cat(paste0("AIC\t: ", round(AIC,2), " (n = ", nr,")"))
-    cat("\n")
-    cat(paste0("MAPE\t: ", round(MAPE,5)))
-    cat("\n")
-    cat(paste0("BIAS\t: ", round(BIAS,5)))
-    cat("\n")
-    cat(paste0("MSLRE\t: ", round(MSLRE, 5)))
-    metrics = c(AIC, MAPE, BIAS, MSLRE)
-    names(metrics) <- c("AIC","MAPE","BIAS","MSLRE")
-    return(invisible(metrics))
+    metrics <- data.frame("MAPE" = MAPE, "MSLRE" = MSLRE, "BIAS" = BIAS, "AIC" = AIC)
+    return(metrics)
 }
 
 # vcov ---------------------------------------------------
@@ -1070,7 +1060,7 @@ sigma.tsissm.estimate <- function(object, ...) {
 #' @description Generates a list of model equations in LaTeX.
 #' @param object an object of class \dQuote{tsissm.estimate}.
 #' @param ... not currently used.
-#' @return A list of equations in LaTeX which can be used in documents. This is
+#' @returns A list of equations in LaTeX which can be used in documents. This is
 #' a list with 3 slots for the observation, state and variance equations,
 #' @details This method is called in the summary when the format output option
 #' chosen is \dQuote{flextable}.

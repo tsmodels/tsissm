@@ -5,7 +5,7 @@
 #' @import data.table
 #' @importFrom RTMB AD ADoverload ADREPORT REPORT matrix eigen as.vector.advector
 #' @importFrom TMB MakeADFun
-#' @importFrom utils head tail data txtProgressBar setTxtProgressBar write.table
+#' @importFrom utils head tail data txtProgressBar setTxtProgressBar
 #' @importFrom stats sd var acf na.pass pchisq pgamma qqline qqnorm simulate na.omit median fitted coef quantile residuals predict logLik cov cor qt pnorm AIC BIC nobs sigma ar arima dnorm printCoefmat vcov density
 #' @importFrom graphics grid legend lines par plot points abline axis axis.Date axis.POSIXct box polygon layout mtext title hist boxplot
 #' @importFrom grDevices gray n2mfrow

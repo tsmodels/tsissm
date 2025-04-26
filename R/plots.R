@@ -15,7 +15,8 @@
 #'
 plot.tsissm.estimate <- function(x, y = NULL, ...)
 {
-    opar <- par(mfrow = c(1,1))
+    opar <- par(no.readonly = TRUE)
+    on.exit(par(opar))
     tsd <- tsdecompose(x)
     # fitted+actual and then states
     a <- x$spec$target$y_orig
@@ -35,7 +36,6 @@ plot.tsissm.estimate <- function(x, y = NULL, ...)
         mtext(colnames(tsd)[i], side = 4, adj = 0.5, padj = 0.5, cex = 0.7, font = 2, family = "mono")
         grid()
     }
-    suppressWarnings(par(opar))
 }
 
 #' @method plot tsissm.simulate
@@ -43,7 +43,8 @@ plot.tsissm.estimate <- function(x, y = NULL, ...)
 #' @export
 plot.tsissm.simulate <- function(x, y = NULL, ...)
 {
-    opar <- par(mfrow = c(1,1))
+    opar <- par(no.readonly = TRUE)
+    on.exit(par(opar))
     components <- tsdecompose(x)
     n <- length(components) + 1
     colx <- (.viridis_fun(option = "H", begin = 0.4, end = 0.9, alpha = 0.5)(n))
@@ -57,7 +58,6 @@ plot.tsissm.simulate <- function(x, y = NULL, ...)
         plot(components[[component_names[i]]], gradient_color = colx[i], main = "", ylab = "", xlab = "", x_axes = FALSE, cex.axis = 0.8, interval_color = "steelblue", median_width = 1, interval_type = 1, interval_width = 1)
         mtext(component_names[i], side = 4, adj = 0.5, padj = 0.5, cex = 0.7, font = 2, family = "mono")
     }
-    suppressWarnings(par(opar))
 }
 
 #' @method plot tsissm.profile
@@ -66,7 +66,8 @@ plot.tsissm.simulate <- function(x, y = NULL, ...)
 plot.tsissm.profile <- function(x, y = NULL, type = c("coef","mape","mase","crps"), ...)
 {
     Simulation <- Variable <- NULL
-    opar <- par(mfrow = c(1,1))
+    opar <- par(no.readonly = TRUE)
+    on.exit(par(opar))
     type <- match.arg(type[1], c("coef","mape","mase","crps"))
     if (type == "coef") {
         true_values <- data.table(Variable = names(x$true_coef),
@@ -99,6 +100,5 @@ plot.tsissm.profile <- function(x, y = NULL, type = c("coef","mape","mase","crps
         colx <- rev(.viridis_fun(alpha = 0.5, begin = 0, end = 0.7, option = "H")(ncol(tmp)))
         boxplot(round(tmp, 2), xlab = "Horizon", ylab = "CRPS", col = colx, outline = FALSE, main = "CRPS by Horizon")
     }
-    suppressWarnings(par(opar))
     return(invisible(x))
 }

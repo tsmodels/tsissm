@@ -4,9 +4,10 @@
 #' @param object an object of class \dQuote{tsissm.estimate}.
 #' @param plot whether to generate diagnostic plots to accompany summary.
 #' @param ... not currently used.
-#' @return A list of tables (printed out and returned invisibly) with
-#' Ljung-Box test for residual autocorrelation, parameter and model bounds
-#' diagnostics and outlier dates using the Rosner test (\code{\link[EnvStats]{rosnerTest}}).
+#' @returns A list of tests including the weighted Ljung-Box test for residual 
+#' autocorrelation, system forecastability test, and outlier dates using the 
+#' Rosner test (\code{\link[EnvStats]{rosnerTest}}). Optionally generates a plot
+#' of relevant diagnostics.
 #' @aliases tsdiagnose
 #' @method tsdiagnose tsissm.estimate
 #' @rdname tsdiagnose
@@ -16,29 +17,13 @@
 tsdiagnose.tsissm.estimate <- function(object, plot = FALSE, ...)
 {
     if (sum(object$spec$arma$order) > 0) {
-        cat("\nARMA roots (<1)")
-        cat("\n------------------------------------------\n")
         armav <- coef(object)
         armav <- armav[grepl("theta|psi", names(armav))]
         rt <- .armaroots(armav)
-        if (object$spec$arma$order[1] > 0) {
-            cat("Inverse AR roots:", 1/abs(rt$root$ar))
-            cat("\n")
-        }
-        if (object$spec$arma$order[2] > 0) {
-            cat("Inverse MA roots:", 1/abs(rt$root$ma))
-            cat("\n")
-        }
     } else {
         rt <- NULL
     }
-    cat("\nForecastability")
-    cat("\n------------------------------------------\n")
     e <- abs(eigen(object$model$D, symmetric = FALSE)$values)
-    cat("Real Eigenvalues (D):", round(e,3))
-    cat("\n")
-    cat("\nWeighted Ljung-Box Test [scaled residuals]")
-    cat("\n------------------------------------------\n")
     df <- sum(object$spec$arma$order)
     sigma <- sigma(object)
     r <- as.numeric(na.omit(residuals(object, transformed = TRUE)/sigma))
@@ -53,25 +38,72 @@ tsdiagnose.tsissm.estimate <- function(object, plot = FALSE, ...)
     lbsr <- data.table(Lag =  c("Lag[1]", paste0("Lag[",b2j,"]"), paste0("Lag[",b3j,"]"), paste0("Lag[",b4j,"]")),
                        statistic = c(b1$statistic[[1]], b2$statistic[[1]], b3$statistic[[1]],b4$statistic[[1]]),
                        pvalue = c(b1$p.value[[1]], b2$p.value[[1]],b3$p.value[[1]], b4$p.value[[1]]))
-    print(lbsr, row.names = FALSE, digits = 3)
     rtest <- .rosner_test(as.numeric(na.omit(residuals(object, transformed = TRUE))), k = 10)
     if (any(rtest$Outlier)) {
-        out.index <- object$spec$target$index[which(object$spec$good == 1)][rtest$Obs.Num[rtest$Outlier]]
-        cat("\nOutlier Diagnostics (based on Rosner Test)")
-        cat("\n------------------------------------------")
-        cat("\nOutliers:", as.character(out.index))
+        outliers_index <- object$spec$target$index[which(object$spec$good == 1)][rtest$Obs.Num[rtest$Outlier]]
     } else {
-        out.index <- NULL
+        outliers_index <- NULL
     }
     if (plot) {
+        opar <- par(no.readonly = TRUE)
+        on.exit(par(opar))
         par(mfrow = c(2,2), mar = c(3,3,3,3))
         if (df > 0) .plotarmaroots(.armaroots(armav))
         acf(as.numeric(r), type = "correlation", main = "Scaled Residuals Autocorrelation")
-        hist(r, breaks = "fd", main = "Scaled Residuals Histogram", probability = T)
+        hist(r, breaks = "fd", main = "Scaled Residuals Histogram", probability = TRUE)
         box()
         qqnorm(r)
         qqline(r, col = 2)
     }
-    L <- list(armaroots = rt, D.eigenvalues = e, lb_test = lbsr, outliers = rtest$all.stats, outlier_index = out.index)
-    return(invisible(L))
+    L <- list(arma_test = rt, 
+              stability_test = e, 
+              weighted_box_test = lbsr, 
+              rosner_test = rtest, 
+              outliers_index = outliers_index)
+    class(L) <- "tsissm.diagnose"
+    return(L)
+}
+
+
+#' Model Diagnostics Print method
+#'
+#' @description Print method for class \dQuote{tsissm.diagnose}
+#' @param x an object of class \dQuote{tsissm.duagnose} generated from
+#' calling \code{\link[tsissm]{tsdiagnose}}.
+#' @param ... not currently used.
+#' @returns Invisibly returns the original object and prints the output to console.
+#' @aliases print.tsissm.diagnose
+#' @method print tsissm.diagnose
+#' @rdname print.tsissm.diagnose
+#' @export
+#'
+#'
+print.tsissm.diagnose <- function(x, ...)
+{
+    arma_test <- x$arma_test
+    if (!is.null(arma_test)) {
+        cat("\nARMA roots (<1)")
+        cat("\n------------------------------------------\n")
+        if (!is.null(arma_test$root$ar)) {
+            cat("Inverse AR roots:", 1/abs(arma_test$root$ar))
+            cat("\n")
+        }
+        if (!is.null(arma_test$root$ma)) {
+            cat("Inverse MA roots:", 1/abs(arma_test$root$ma))
+            cat("\n")
+        }
+    }
+    cat("\nForecastability")
+    cat("\n------------------------------------------\n")
+    cat("Real Eigenvalues (D):", round(x$stability_test,3))
+    cat("\n")
+    cat("\nWeighted Ljung-Box Test [scaled residuals]")
+    cat("\n------------------------------------------\n")
+    print(x$weighted_box_test, row.names = FALSE, digits = 3)
+    if (any(x$rosner_test$Outlier)) {
+        cat("\nOutlier Diagnostics (based on Rosner Test)")
+        cat("\n------------------------------------------")
+        cat("\nOutliers:", as.character(x$outliers_index))
+    }
+    return(invisible(x))
 }

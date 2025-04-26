@@ -12,6 +12,9 @@
 
 \item{...}{not currently used.}
 }
+\value{
+an xts object of the fitted values.
+}
 \description{
 Extract the fitted values from an estimated model.
 }

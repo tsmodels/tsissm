@@ -75,7 +75,7 @@ evaluation and select the top 4 models for ensembling.
 train <- y["/2021"]
 test <- y["2022/"]
 lambda_pre_estimate <- box_cox(lambda = NA)$transform(train) |> attr("lambda")
-xreg <- auto_regressors(train, frequency = 12, lambda = lambda_pre_estimate, sampling = "months", h = 26, method = "sequential", 
+xreg <- auto_regressors(train, frequency = 12, lambda = lambda_pre_estimate, sampling = "months", h = nrow(test), method = "sequential", 
                         check.rank = TRUE, discard.cval = 3.5, maxit.iloop = 10, maxit.oloop = 10, 
                         forc_dates = index(test))
 spec <- issm_modelspec(train, auto = TRUE, slope = c(TRUE, FALSE), seasonal = TRUE, 
