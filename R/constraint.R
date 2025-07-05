@@ -287,12 +287,158 @@ make_constraint <- function(spec, fun, issmenv) {
         constraint_fun <- NULL
     } else {
         constraint_fun <- function(pars, fun, issmenv) {
+            if (any(is.nan(pars))) stop("\nsolver returned NaN values. Try a different algorithm.")
             con <- unlist(sapply(C, do.call, list(pars, fun, issmenv)))
             jac <- do.call(rbind, lapply(J, function(x) x(pars, fun, issmenv)))
             return(list("constraints" = con, "jacobian" = jac))
         }
     }
     return(constraint_fun)
+}
+
+
+make_constraint_solnp <- function(spec, fun, issmenv) {
+    # case 1 only level
+    # case 2 only level and GARCH
+    # case 3 only level and arma
+    # case 4 only level and arma and GARCH
+    # case 5 level +
+    # case 6 level + and GARCH
+    # case 7 level + and arma
+    # case 8 level + and arma and GARCH
+    case_id <- model_case(spec)
+    use_case <- c(0, 0, 0)
+    not_null <- 0
+    if (case_id[2] == 0) {
+        issm_c <- function(pars, fun, issmenv) {
+            NULL
+        }
+        issm_j <- function(pars, fun, issmenv) {
+            NULL
+        }
+    } else {
+        not_null <- not_null + 1
+        issm_c <- function(pars, fun, issmenv) {
+            issmenv$constraint$fn(pars)
+        }
+        issm_j <- function(pars, fun, issmenv) {
+            if (all(abs(issmenv$constraint$report(pars)$tmp - 1) <= 1e-12)) {
+                J <- matrix(1, ncol = length(pars), nrow = 1)
+            } else {
+                J <- issmenv$constraint$gr(pars)
+            }
+            return(J)
+        }
+        use_case[1] <- 1
+    }
+    if (case_id[3] > 0) {
+        arma_order <- spec$arma$order
+        if (arma_order[1] > 1 & arma_order[2] > 1) {
+            not_null <- not_null + 1
+            arma_c <- function(pars, fun, issmenv) {
+                c(issmenv$arcons$fn(pars),issmenv$macons$fn(pars))
+            }
+            arma_j <- function(pars, fun, issmenv) {
+                rbind(issmenv$arcons$gr(pars), issmenv$macons$gr(pars))
+            }
+        } else if (arma_order[1] > 1 & arma_order[2] <= 1) {
+            not_null <- not_null + 1
+            arma_c <- function(pars, fun, issmenv) {
+                issmenv$arcons$fn(pars)
+            }
+            arma_j <- function(pars, fun, issmenv) {
+                issmenv$arcons$gr(pars)
+            }
+        } else if (arma_order[1] <= 1 & arma_order[2] > 1) {
+            not_null <- not_null + 1
+            arma_c <- function(pars, fun, issmenv) {
+                issmenv$macons$fn(pars)
+            }
+            arma_j <- function(pars, fun, issmenv) {
+                issmenv$macons$gr(pars)
+            }
+        } else {
+            arma_c <- function(pars, fun, issmenv) {
+                NULL
+            }
+            arma_j <- function(pars, fun, issmenv) {
+                NULL
+            }
+        }
+        use_case[2] <- 1
+    } else {
+        arma_c <- function(pars, fun, issmenv) {
+            NULL
+        }
+        arma_j <- function(pars, fun, issmenv) {
+            NULL
+        }
+    }
+    if (case_id[4] > 0) {
+        not_null <- not_null + 1
+        garch_c <- function(pars, fun, issmenv) {
+            garch_constraint(pars, fun, issmenv)
+        }
+        garch_j <- function(pars, fun, issmenv){
+            garch_jacobian(pars, fun, issmenv)
+        }
+        use_case[3] <- 1
+    } else {
+        garch_c <- function(pars, fun, issmenv) {
+            NULL
+        }
+        garch_j <- function(pars, fun, issmenv){
+            NULL
+        }
+    }
+    
+    C <- list()
+    J <- list()
+    k <- 0
+    if (use_case[1] == 1) {
+        k <- k + 1
+        C[[k]] <- issm_c
+        J[[k]] <- issm_j
+    }
+    if (use_case[2] == 1) {
+        k <- k + 1
+        C[[k]] <- arma_c
+        J[[k]] <- arma_j
+    }
+    if (use_case[3] == 1) {
+        k <- k + 1
+        C[[k]] <- garch_c
+        J[[k]] <- garch_j
+    }
+    
+    if (sum(use_case) == 0) {
+        constraint_fun <- NULL
+        constraint_jac <- NULL
+        ineq_lower <- NULL
+        ineq_upper <- NULL
+    } else {
+        if (not_null > 0) {
+            n_c <- length(unlist(sapply(C, do.call, list(fun$par, fun, issmenv))))
+            constraint_fun <- function(pars, fun, issmenv) {
+                if (any(is.nan(pars))) stop("\nsolver returned NaN values. Try a different algorithm.")
+                con <- unlist(sapply(C, do.call, list(pars, fun, issmenv)))
+                return(con)
+            }
+            constraint_jac <- function(pars, fun, issmenv) {
+                if (any(is.nan(pars))) stop("\nsolver returned NaN values. Try a different algorithm.")
+                jac <- do.call(rbind, lapply(J, function(x) x(pars, fun, issmenv)))
+                return(jac)
+            }
+            ineq_lower <- rep(-1e8, n_c)
+            ineq_upper <- rep(0, n_c)
+        } else {
+            constraint_fun <- NULL
+            constraint_jac <- NULL
+            ineq_lower <- NULL
+            ineq_upper <- NULL
+        }
+    }
+    return(list(ineq_fn = constraint_fun, ineq_jac = constraint_jac, ineq_lower = ineq_lower, ineq_upper = ineq_upper))
 }
 
 companion_matrix <- function(params) {

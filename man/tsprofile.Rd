@@ -5,7 +5,15 @@
 \alias{tsprofile}
 \title{Model Simulation Based Profiling}
 \usage{
-\method{tsprofile}{tsissm.estimate}(object, h = 1, nsim = 100, seed = NULL, trace = FALSE, ...)
+\method{tsprofile}{tsissm.estimate}(
+  object,
+  h = 1,
+  nsim = 100,
+  seed = NULL,
+  solver = "nloptr",
+  trace = FALSE,
+  ...
+)
 }
 \arguments{
 \item{object}{an object of class \dQuote{tsissm.estimate}.}
@@ -16,6 +24,8 @@
 
 \item{seed}{an object specifying if and how the random number generator
 should be initialized. See the simulate documentation for more details.}
+
+\item{solver}{either \dQuote{nlortr} or \dQuote{solnp}.}
 
 \item{trace}{whether to show the progress bar and additionally output verbose messages. 
 The user is expected to have set up appropriate handlers for this using 

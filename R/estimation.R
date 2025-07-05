@@ -3,7 +3,8 @@
 #' @description Estimates a model given a specification object using
 #' maximum likelihood.
 #' @param object an object of class \dQuote{tsissm.spec} or \dQuote{tsissm.autospec}.
-#' @param control solver control parameters passed to the nloptr function.
+#' @param solver a choice or either \code{nloptr} or \code{solnp}.
+#' @param control solver control parameters (see \code{\link{issm_control}}).
 #' @param scores whether to calculate the analytic scores (Jacobian) of the
 #' likelihood. This is not available for the \dQuote{tsissm.autospec} object.
 #' @param trace whether to show a progress bar for the automatic selection object
@@ -37,7 +38,7 @@
 #' @export
 #'
 #'
-estimate.tsissm.spec <- function(object, control = issm_control(algorithm = "SLSQP", trace = 0), scores = TRUE, debug_mode = FALSE, ...)
+estimate.tsissm.spec <- function(object, solver = "nloptr", control = issm_control(solver = solver), scores = TRUE, debug_mode = FALSE, ...)
 {
     estimate <- NULL
     tic <- Sys.time()
@@ -49,11 +50,11 @@ estimate.tsissm.spec <- function(object, control = issm_control(algorithm = "SLS
     assign("xseed", 100, envir = solver_env)
     
     if (object$variance$type == "constant") {
-        opt <- .estimate_ad_constant(object, control = control, return_scores = scores, ...)
+        opt <- .estimate_ad_constant(object, solver = solver, control = control, return_scores = scores, ...)
         object$xseed <- opt$xseed
         f <- iss_filter_constant(opt$pars, obj = object)
     } else if (object$variance$type == "dynamic") {
-        opt <- .estimate_ad_dynamic(object, control = control, return_scores = scores, ...)
+        opt <- .estimate_ad_dynamic(object, solver = solver, control = control, return_scores = scores, ...)
         object$xseed <- opt$xseed
         f <- iss_filter_dynamic(opt$pars, obj = object, opt = opt)
     }
@@ -80,15 +81,23 @@ estimate.tsissm.spec <- function(object, control = issm_control(algorithm = "SLS
 #' @rdname estimate
 #' @export
 #'
-estimate.tsissm.autospec <- function(object, control = NULL, trace = FALSE, ...)
+estimate.tsissm.autospec <- function(object, solver = "nloptr", control = NULL, trace = FALSE, ...)
 {
     parameters <- NULL
     args_grid <- object$grid
     gnames <- colnames(args_grid)
     if (is.null(control)) {
-        control <- issm_control(algorithm = "SLSQP", trace = 0)
+        if (solver == "nloptr") {
+            control <- issm_control(solver = "nloptr", algorithm = "SLSQP", trace = 0) 
+        } else {
+            control <- issm_control(solver = "solnp", trace = 0) 
+        }
     } else {
-        control$print_level <- 0
+        if (solver == "nloptr") {
+            control$print_level <- 0
+        } else {
+            control$trace <- 0
+        }
     }
     distribution <- object$distribution
     garch_order <- object$garch_order
@@ -110,7 +119,7 @@ estimate.tsissm.autospec <- function(object, control = NULL, trace = FALSE, ...)
                                    seasonal_frequency = seasonal_frequency, seasonal_harmonics = as.numeric(args_grid[1,grepl("^Seasonal",gnames)]), 
                                    ar = args_grid[1,"ar"], ma = args_grid[1,"ma"], xreg = xreg, lambda = lambda, lower = lower, 
                                    upper = upper, sampling = sampling, variance = args_grid[1,"variance"], distribution = distribution)
-        tmp_mod <- try(estimate(tmp_spec, control = control, scores = FALSE), silent = TRUE)
+        tmp_mod <- try(estimate(tmp_spec, solver = solver, control = control, scores = FALSE), silent = TRUE)
         tmp_toc <- Sys.time() - tmp_tic    
         est_time_one <- tmp_toc
         estimated_time <- round(as.numeric(est_time_one/n_cores) * NROW(args_grid), 2) %/% 60
@@ -127,7 +136,7 @@ estimate.tsissm.autospec <- function(object, control = NULL, trace = FALSE, ...)
                                    seasonal_frequency = seasonal_frequency, seasonal_harmonics = as.numeric(args_grid[i,grepl("^Seasonal",gnames)]), 
                                    ar = args_grid[i,"ar"], ma = args_grid[i,"ma"], xreg = xreg, lambda = lambda, lower = lower, 
                                    upper = upper, sampling = sampling, variance = args_grid[i,"variance"], distribution = distribution)
-            mod <- try(estimate(spec, control = control, scores = FALSE), silent = TRUE)
+            mod <- try(estimate(spec, solver = solver, control = control, scores = FALSE), silent = TRUE)
             if (inherits(mod, 'try-error')) {
                 tab <- data.table(iter = i, lambda = as.numeric(NA), AIC = as.numeric(NA), MAPE = as.numeric(NA))
             } else {
@@ -144,7 +153,7 @@ estimate.tsissm.autospec <- function(object, control = NULL, trace = FALSE, ...)
                                    seasonal_frequency = seasonal_frequency, seasonal_harmonics = as.numeric(args_grid[i,grepl("^Seasonal",gnames)]), 
                                    ar = args_grid[i,"ar"], ma = args_grid[i,"ma"], xreg = xreg, lambda = lambda, lower = lower, 
                                    upper = upper, sampling = sampling, variance = args_grid[i,"variance"], distribution = distribution)
-            mod <- try(estimate(spec, control = control, scores = FALSE), silent = TRUE)
+            mod <- try(estimate(spec, solver = solver, control = control, scores = FALSE), silent = TRUE)
             if (inherits(mod, 'try-error')) {
                 tab <- data.table(iter = i, lambda = as.numeric(NA), AIC = as.numeric(NA), MAPE = as.numeric(NA))
             } else {
@@ -450,8 +459,10 @@ tmb_inputs_issm_dynamic <- function(spec)
     # create function for ARMA and non ARMA models
     llh_fun <- function(pars, fun, issmenv) {
         names(pars) <- issmenv$tmb_names
+        if (any(is.nan(pars))) stop("\nsolver returned NaN values. Try a different algorithm.")
         lik <- fun$fn(pars)
         if (is.na(lik) | !is.finite(lik)) {
+            warning("NaN or Infinite value in likelihood")
             lik <- issmenv$lik + 0.1 * abs(issmenv$lik)
             issmenv$lik <- lik
         } else {
@@ -462,12 +473,14 @@ tmb_inputs_issm_dynamic <- function(spec)
     grad_fun <- function(pars, fun, issmenv)
     {
         names(pars) <- issmenv$tmb_names
+        if (any(is.nan(pars))) stop("\nsolver returned NaN values. Try a different algorithm.")
         fun$gr(pars)
     }
     
     hess_fun <- function(pars, fun, issmenv)
     {
         names(pars) <- issmenv$tmb_names
+        if (any(is.nan(pars))) stop("\nsolver returned NaN values. Try a different algorithm.")
         fun$he(pars, atomic = TRUE)
     }
     
@@ -582,9 +595,11 @@ tmb_inputs_issm_constant <- function(spec)
     # create function for ARMA and non ARMA models
     llh_fun <- function(pars, fun, issmenv) {
         names(pars) <- issmenv$tmb_names
+        if (any(is.nan(pars))) stop("\nsolver returned NaN values. Try a different algorithm.")
         lik <- fun$fn(pars)
         if (is.na(lik) | !is.finite(lik)) {
-            lik <- issmenv$lik + 0.1 * abs(issmenv$lik)
+            warning("NaN or Infinite value in likelihood")
+            lik <- issmenv$lik + 0.25 * abs(issmenv$lik)
             issmenv$lik <- lik
         } else {
             issmenv$lik <- lik
@@ -594,12 +609,14 @@ tmb_inputs_issm_constant <- function(spec)
     grad_fun <- function(pars, fun, issmenv)
     {
         names(pars) <- issmenv$tmb_names
+        if (any(is.nan(pars))) stop("\nsolver returned NaN values. Try a different algorithm.")
         fun$gr(pars)
     }
     
     hess_fun <- function(pars, fun, issmenv)
     {
         names(pars) <- issmenv$tmb_names
+        if (any(is.nan(pars))) stop("\nsolver returned NaN values. Try a different algorithm.")
         fun$he(pars, atomic = TRUE)
     }
     
@@ -620,7 +637,7 @@ tmb_inputs_issm_constant <- function(spec)
     return(L)
 }
 
-.estimate_ad_constant <- function(object, control, return_scores = TRUE, ...)
+.estimate_ad_constant <- function(object, solver = "nloptr", control, return_scores = TRUE, ...)
 {
     parameters <- group <- NULL
     spec_list <- tmb_inputs_issm_constant(object)
@@ -648,7 +665,6 @@ tmb_inputs_issm_constant <- function(spec)
     issmenv$parmatrix <- object$parmatrix
     issmenv$map <- spec_list$map
     issmenv$parameters <- spec_list$par_list
-    
     if (object$arma$order[1] > 1 & object$arma$order[2] <= 1) {
         issmenv$arindex <- which(object$parmatrix[estimate == 1]$parameters %in% object$parmatrix[grepl("theta",parameters)]$parameters)
         issmenv$arcons <- ar_jconstraint(fun$par, fun, issmenv)
@@ -665,23 +681,32 @@ tmb_inputs_issm_constant <- function(spec)
     if (case_id[2] > 0) {
         issmenv$constraint <- issm_constraint(fun$par, fun, issmenv)
     }
-    cfun <- make_constraint(object, fun, issmenv)
-    if (is.null(control)) {
-        control <- issm_control(algorithm = "SLSQP", trace = 0)
-        sol <- nloptr(x0 = fun$par, eval_f = spec_list$llh_fun, eval_grad_f = spec_list$grad_fun, eval_g_ineq = cfun,
-                      lb = spec_list$lower, ub = spec_list$upper, opts = control, fun = fun, issmenv = issmenv)
-        if (sol$status < 0) {
-            control <- issm_control(algorithm = "AUGLAG/CCSAQ", trace = 0)
-            par_iter <- sol$solution
-            sol <- nloptr(x0 = par_iter, eval_f = spec_list$llh_fun, eval_grad_f = spec_list$grad_fun, eval_g_ineq = cfun,
+    if (solver == "nloptr") {
+        cfun <- make_constraint(object, fun, issmenv)
+        if (is.null(control)) {
+            control <- issm_control(solver = "nloptr", algorithm = "SLSQP", trace = 0)
+            sol <- nloptr(x0 = fun$par, eval_f = spec_list$llh_fun, eval_grad_f = spec_list$grad_fun, eval_g_ineq = cfun,
                           lb = spec_list$lower, ub = spec_list$upper, opts = control, fun = fun, issmenv = issmenv)
+            if (sol$status < 0) {
+                control <- issm_control(solver = "nloptr", algorithm = "AUGLAG/CCSAQ", trace = 0)
+                par_iter <- sol$solution
+                sol <- nloptr(x0 = par_iter, eval_f = spec_list$llh_fun, eval_grad_f = spec_list$grad_fun, eval_g_ineq = cfun,
+                              lb = spec_list$lower, ub = spec_list$upper, opts = control, fun = fun, issmenv = issmenv)
+            }
+        } else {
+            sol <- nloptr(x0 = fun$par, eval_f = spec_list$llh_fun, eval_grad_f = spec_list$grad_fun, eval_g_ineq = cfun,
+                          lb = spec_list$lower, ub = spec_list$upper, opts = control, fun = fun, issmenv = issmenv) 
         }
+        pars <- sol$solution
     } else {
-        sol <- nloptr(x0 = fun$par, eval_f = spec_list$llh_fun, eval_grad_f = spec_list$grad_fun, eval_g_ineq = cfun,
-                      lb = spec_list$lower, ub = spec_list$upper, opts = control, fun = fun, issmenv = issmenv) 
+        cfun <- make_constraint_solnp(object, fun, issmenv)
+        sol <- csolnp(pars = fun$par, fn = spec_list$llh_fun, gr = spec_list$grad_fun, ineq_fn = cfun$ineq_fn,
+                      ineq_jac = cfun$ineq_jac, ineq_lower = cfun$ineq_lower, ineq_upper = cfun$ineq_upper, 
+                      lower = spec_list$lower, upper = spec_list$upper, control = control, fun = fun, issmenv = issmenv)
+        sol$status <- sol$convergence
+        pars <- sol$pars
     }
     spec_list$data$xseed <- as.numeric(fun$env$data$xseed)
-    pars <- sol$solution
     if (return_scores) {
         scores <- score_function(pars, spec_list)
     } else {
@@ -703,7 +728,7 @@ tmb_inputs_issm_constant <- function(spec)
 }
 
 
-.estimate_ad_dynamic <- function(object, control = list(trace = 0), return_scores = TRUE, ...)
+.estimate_ad_dynamic <- function(object, solver = "nloptr", control = NULL, return_scores = TRUE, ...)
 {
     parameters <- group <- NULL
     spec_list <- tmb_inputs_issm_dynamic(object)
@@ -738,7 +763,6 @@ tmb_inputs_issm_constant <- function(spec)
     issmenv$garchindex <- garch_index
     issmenv$map <- spec_list$map
     issmenv$parameters <- spec_list$par_list
-    
     if (object$arma$order[1] > 1 & object$arma$order[2] <= 1) {
         issmenv$arindex <- which(object$parmatrix[estimate == 1]$parameters %in% object$parmatrix[grepl("theta",parameters)]$parameters)
         issmenv$arcons <- ar_jconstraint(fun$par, fun, issmenv)
@@ -751,28 +775,38 @@ tmb_inputs_issm_constant <- function(spec)
         issmenv$macons <- ma_jconstraint(fun$par, fun, issmenv)
         issmenv$arcons <- ar_jconstraint(fun$par, fun, issmenv)
     }
-
+    
     case_id <- model_case(object)
     if (case_id[2] > 0) {
         issmenv$constraint <- issm_constraint(fun$par, fun, issmenv)
     }
-    cfun <- make_constraint(object, fun, issmenv)
-    if (is.null(control)) {
-        control <- issm_control(algorithm = "SLSQP", trace = 0)
-        sol <- nloptr(x0 = fun$par, eval_f = spec_list$llh_fun, eval_grad_f = spec_list$grad_fun, eval_g_ineq = cfun,
-                      lb = spec_list$lower, ub = spec_list$upper, opts = control, fun = fun, issmenv = issmenv)
-        if (sol$status < 0) {
-            control <- issm_control(algorithm = "AUGLAG/CCSAQ", trace = 0)
-            par_iter <- sol$solution
-            sol <- nloptr(x0 = par_iter, eval_f = spec_list$llh_fun, eval_grad_f = spec_list$grad_fun, eval_g_ineq = cfun,
+    
+    if (solver == "nloptr") {
+        cfun <- make_constraint(object, fun, issmenv)
+        if (is.null(control)) {
+            control <- issm_control(solver = "nloptr", algorithm = "SLSQP", trace = 0)
+            sol <- nloptr(x0 = fun$par, eval_f = spec_list$llh_fun, eval_grad_f = spec_list$grad_fun, eval_g_ineq = cfun,
                           lb = spec_list$lower, ub = spec_list$upper, opts = control, fun = fun, issmenv = issmenv)
+            if (sol$status < 0) {
+                control <- issm_control(solver = "nloptr", algorithm = "AUGLAG/CCSAQ", trace = 0)
+                par_iter <- sol$solution
+                sol <- nloptr(x0 = par_iter, eval_f = spec_list$llh_fun, eval_grad_f = spec_list$grad_fun, eval_g_ineq = cfun,
+                              lb = spec_list$lower, ub = spec_list$upper, opts = control, fun = fun, issmenv = issmenv)
+            }
+        } else {
+            sol <- nloptr(x0 = fun$par, eval_f = spec_list$llh_fun, eval_grad_f = spec_list$grad_fun, eval_g_ineq = cfun,
+                          lb = spec_list$lower, ub = spec_list$upper, opts = control, fun = fun, issmenv = issmenv) 
         }
+        spec_list$data$xseed <- as.numeric(fun$env$data$xseed)
+        pars <- sol$solution
     } else {
-        sol <- nloptr(x0 = fun$par, eval_f = spec_list$llh_fun, eval_grad_f = spec_list$grad_fun, eval_g_ineq = cfun,
-                      lb = spec_list$lower, ub = spec_list$upper, opts = control, fun = fun, issmenv = issmenv) 
+        cfun <- make_constraint_solnp(object, fun, issmenv)
+        sol <- csolnp(pars = fun$par, fn = spec_list$llh_fun, gr = spec_list$grad_fun, ineq_fn = cfun$ineq_fn,
+                      ineq_jac = cfun$ineq_jac, ineq_lower = cfun$ineq_lower, ineq_upper = cfun$ineq_upper, 
+                      lower = spec_list$lower, upper = spec_list$upper, control = control, fun = fun, issmenv = issmenv)
+        sol$status <- sol$convergence
+        pars <- sol$pars
     }
-    spec_list$data$xseed <- as.numeric(fun$env$data$xseed)
-    pars <- sol$solution
     
     if (return_scores) {
         scores <- score_function(pars, spec_list)

@@ -16,6 +16,7 @@
   weights_scheme = c("AIC", "BIC", "U"),
   weights = NULL,
   seed = NULL,
+  solver = "nloptr",
   trace = FALSE,
   ...
 )
@@ -28,6 +29,7 @@
   estimate_every = 1,
   rolling = FALSE,
   seed = NULL,
+  solver = "nloptr",
   trace = FALSE,
   ...
 )
@@ -60,6 +62,8 @@ from the filtered data (TRUE).}
 \item{seed}{an value specifying if and how the random number generator should 
 be initialized (\sQuote{seeded}). Either NULL or an integer that will be used in a 
 call to set.seed before simulating the response vectors.}
+
+\item{solver}{either \dQuote{nlortr} or \dQuote{solnp}.}
 
 \item{trace}{whether to show the progress bar. The user is expected to have
 set up appropriate handlers for this using the \dQuote{progressr} package.}

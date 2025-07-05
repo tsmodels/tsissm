@@ -20,6 +20,7 @@
 #' @param seed an value specifying if and how the random number generator should 
 #' be initialized (\sQuote{seeded}). Either NULL or an integer that will be used in a 
 #' call to set.seed before simulating the response vectors.
+#' @param solver either \dQuote{nlortr} or \dQuote{solnp}.
 #' @param trace whether to show the progress bar. The user is expected to have
 #' set up appropriate handlers for this using the \dQuote{progressr} package.
 #' @param ... not used.
@@ -56,7 +57,7 @@
 #'
 tsbacktest.tsissm.autospec <- function(object, start = floor(length(object$y)/2), end = length(object$y),
                                    h = 1, estimate_every = 1, rolling = FALSE, weights_scheme = c("AIC","BIC","U"), weights = NULL,
-                                   seed = NULL, trace = FALSE, ...)
+                                   seed = NULL, solver = "nloptr", trace = FALSE, ...)
 {
     if (object$top_n > 1) {
         top_n <- object$top_n
@@ -67,9 +68,10 @@ tsbacktest.tsissm.autospec <- function(object, start = floor(length(object$y)/2)
             weights_scheme <- "U"
         }
         out <- .backtest_ensemble(object, start = start, end = end, h = h, estimate_every = estimate_every, rolling = rolling, weights_scheme = weights_scheme, 
-                                  weights = weights, seed = seed, trace = trace)
+                                  weights = weights, seed = seed, solver = solver, trace = trace)
     } else {
-        out <- .backtest_top(object, start = start, end = end, h = h, estimate_every = estimate_every, rolling = rolling, seed = seed, trace = trace)
+        out <- .backtest_top(object, start = start, end = end, h = h, estimate_every = estimate_every, rolling = rolling, seed = seed, solver = solver, 
+                             trace = trace)
     }
     return(out)
 }
@@ -78,7 +80,7 @@ tsbacktest.tsissm.autospec <- function(object, start = floor(length(object$y)/2)
 #' @rdname tsbacktest
 #' @export
 tsbacktest.tsissm.spec <- function(object, start = floor(length(object$target$y_orig)/2), end = length(object$target$y_orig),
-                                   h = 1, estimate_every = 1, rolling = FALSE, seed = NULL, trace = FALSE, ...)
+                                   h = 1, estimate_every = 1, rolling = FALSE, seed = NULL, solver = "nloptr", trace = FALSE, ...)
 {
     parameter <- b <- forecast_dates <- NULL
     data <- xts(object$target$y_orig, object$target$index)
@@ -150,7 +152,7 @@ tsbacktest.tsissm.spec <- function(object, start = floor(length(object$target$y_
                                sampling = object$target$sampling, sample_n = object$variance$sample_n, 
                                init_garch =  object$variance$init_variance, garch_order = object$variance$order, 
                                variance = object$variance$type, distribution = object$distribution$type)
-        mod <- try(estimate(spec, scores = FALSE), silent = TRUE)
+        mod <- try(estimate(spec, solver = solver, scores = FALSE), silent = TRUE)
         model_coef <- coef(mod)
         log_lik <- as.numeric(logLik(mod))
         aic <- as.numeric(AIC(mod))
@@ -240,7 +242,8 @@ tsbacktest.tsissm.spec <- function(object, start = floor(length(object$target$y_
 }
 
 .backtest_top <- function(object, start = floor(length(object$y)/2), end = length(object$y), h = 1,
-                          estimate_every = 1, rolling = FALSE, seed = NULL, trace = FALSE, ...)
+                          estimate_every = 1, rolling = FALSE, seed = NULL, solver = "nloptr", 
+                          trace = FALSE, ...)
 {
     parameter <- b <- forecast_dates <- NULL
     data <- object$y
@@ -302,7 +305,7 @@ tsbacktest.tsissm.spec <- function(object, start = floor(length(object$target$y_
                                sampling = object$sampling, sample_n = object$sample_n, 
                                init_garch =  object$init_garch, garch_order = object$garch_order, 
                                variance = object$variance, distribution = object$distribution, top_n = 1)
-        mod <- try(estimate(spec, trace = FALSE), silent = TRUE)
+        mod <- try(estimate(spec, solver = solver, trace = FALSE), silent = TRUE)
         model_coef <- coef(mod)
         log_lik <- as.numeric(logLik(mod))
         aic <- as.numeric(AIC(mod))
@@ -391,7 +394,7 @@ tsbacktest.tsissm.spec <- function(object, start = floor(length(object$target$y_
 
 .backtest_ensemble <- function(object, start = floor(length(object$y)/2), end = length(object$y),
                                h = 1, estimate_every = 1, rolling = FALSE, weights_scheme = c("U","AIC","BIC"), weights = NULL,
-                               seed = NULL, trace = FALSE, ...)
+                               seed = NULL, solver = "nloptr", trace = FALSE, ...)
 {
     if (weights_scheme == "U") {
         wfun <- function(x) {
@@ -467,7 +470,7 @@ tsbacktest.tsissm.spec <- function(object, start = floor(length(object$target$y_
                                sampling = object$sampling, sample_n = object$sample_n, 
                                init_garch =  object$init_garch, garch_order = object$garch_order, 
                                variance = object$variance, distribution = object$distribution, top_n = top_n)
-        mod <- try(estimate(spec, trace = FALSE), silent = TRUE)
+        mod <- try(estimate(spec, solver = solver, trace = FALSE), silent = TRUE)
         w <- wfun(mod)
         L <- index_table[[i]]
         M <- split(L, by = "filter_date")

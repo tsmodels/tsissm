@@ -8,18 +8,21 @@
 \usage{
 \method{estimate}{tsissm.spec}(
   object,
-  control = issm_control(algorithm = "SLSQP", trace = 0),
+  solver = "nloptr",
+  control = issm_control(solver = solver),
   scores = TRUE,
   debug_mode = FALSE,
   ...
 )
 
-\method{estimate}{tsissm.autospec}(object, control = NULL, trace = FALSE, ...)
+\method{estimate}{tsissm.autospec}(object, solver = "nloptr", control = NULL, trace = FALSE, ...)
 }
 \arguments{
 \item{object}{an object of class \dQuote{tsissm.spec} or \dQuote{tsissm.autospec}.}
 
-\item{control}{solver control parameters passed to the nloptr function.}
+\item{solver}{a choice or either \code{nloptr} or \code{solnp}.}
+
+\item{control}{solver control parameters (see \code{\link{issm_control}}).}
 
 \item{scores}{whether to calculate the analytic scores (Jacobian) of the
 likelihood. This is not available for the \dQuote{tsissm.autospec} object.}

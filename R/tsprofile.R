@@ -16,6 +16,7 @@
 #' @param nsim the number of paths to generate.
 #' @param seed an object specifying if and how the random number generator
 #' should be initialized. See the simulate documentation for more details.
+#' @param solver either \dQuote{nlortr} or \dQuote{solnp}.
 #' @param trace whether to show the progress bar and additionally output verbose messages. 
 #' The user is expected to have set up appropriate handlers for this using 
 #' the \code{\link[progressr]{handlers}} function from the \dQuote{progressr} package.
@@ -31,17 +32,17 @@
 #' @rdname tsprofile
 #' @export
 #'
-tsprofile.tsissm.estimate <- function(object, h = 1, nsim = 100, seed = NULL, trace = FALSE, ...)
+tsprofile.tsissm.estimate <- function(object, h = 1, nsim = 100, seed = NULL, solver = "nloptr", trace = FALSE, ...)
 {
     sim <- simulate(object, seed = seed, nsim = nsim, h = length(object$spec$target$y_orig) + h)
     sim <- .check_positivity(sim)
     if (is.null(sim)) return(sim)
-    profile <- profile_fun(sim$distribution, object, h = h, control = NULL, trace = trace)
+    profile <- profile_fun(sim$distribution, object, h = h, solver = solver, control = NULL, trace = trace)
     class(profile) <- "tsissm.profile"
     return(profile)
 }
 
-profile_fun <- function(sim, object, h, control, trace)
+profile_fun <- function(sim, object, h, solver = "nloptr", control, trace)
 {
     Horizon <- Simulation <- NULL
     if (trace) {
@@ -57,7 +58,7 @@ profile_fun <- function(sim, object, h, control, trace)
         yin <- y[1:(nrow(y) - h)]
         spec <- tsspec(object, yin)
         # add try catch
-        mod <- try(estimate(spec, control = control, scores = FALSE), silent = TRUE)
+        mod <- try(estimate(spec, solver = solver, control = control, scores = FALSE), silent = TRUE)
         if (inherits(mod, 'try-error')) {
             return(list(L1 = NULL, L2 = NULL, L3 = NULL))
         }
