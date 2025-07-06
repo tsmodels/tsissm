@@ -18,6 +18,8 @@ issm_control(
 )
 }
 \arguments{
+\item{solver}{choice of \sQuote{nloptr} and \sQuote{solnp}}
+
 \item{algorithm}{(nloptr) the algorithm to use}
 
 \item{trace}{(integer) controls print level information}
@@ -37,13 +39,14 @@ issm_control(
 \item{tol}{(solnp) convergence tolerance}
 }
 \value{
-a list with the options which is then passed to the nloptr or solnp solver.
+a list with the options which is then passed to the appropriate solver.
 }
 \description{
 ISSM solver control parameters
 }
 \details{
-The two function provide defaults for use when using either the \code{\link{nloptr}[nloptr]} or
-\code{\link{csolnp}[Rsolnp]} functions. For the former, additional control parameters may be
-appended to the list if the user so wishes (\sQuote{nloptr} has many more options).
+The function provides defaults for use when using either the \code{\link{nloptr}[nloptr]}
+or \code{\link{csolnp}[Rsolnp]}. For the 
+former, additional control parameters may be appended to the list if the user so wishes 
+(\sQuote{nloptr} has many more options).
 }

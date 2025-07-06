@@ -9,7 +9,7 @@
 \method{estimate}{tsissm.spec}(
   object,
   solver = "nloptr",
-  control = issm_control(solver = solver),
+  control = NULL,
   scores = TRUE,
   debug_mode = FALSE,
   ...

@@ -1,5 +1,6 @@
 #' ISSM solver control parameters
 #'
+#' @param solver choice of \sQuote{nloptr} and \sQuote{solnp}
 #' @param algorithm (nloptr) the algorithm to use
 #' @param trace (integer) controls print level information
 #' @param xtol_rel (nloptr) relative tolerance on optimization parameters
@@ -10,10 +11,11 @@
 #' @param rho (solnp) onitial penalty parameter for the augmented Lagrangian
 #' @param tol (solnp) convergence tolerance
 #' @details
-#' The two function provide defaults for use when using either the \code{\link{nloptr}[nloptr]} or
-#' \code{\link{csolnp}[Rsolnp]} functions. For the former, additional control parameters may be
-#' appended to the list if the user so wishes (\sQuote{nloptr} has many more options).
-#' @returns a list with the options which is then passed to the nloptr or solnp solver.
+#' The function provides defaults for use when using either the \code{\link{nloptr}[nloptr]}
+#' or \code{\link{csolnp}[Rsolnp]}. For the 
+#' former, additional control parameters may be appended to the list if the user so wishes 
+#' (\sQuote{nloptr} has many more options).
+#' @returns a list with the options which is then passed to the appropriate solver.
 #' @rdname solver_control
 #' @export
 issm_control <- function(solver = "nloptr", algorithm = c("SLSQP","AUGLAG/MMA","AUGLAG/CCSAQ"), 

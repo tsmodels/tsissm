@@ -38,7 +38,7 @@
 #' @export
 #'
 #'
-estimate.tsissm.spec <- function(object, solver = "nloptr", control = issm_control(solver = solver), scores = TRUE, debug_mode = FALSE, ...)
+estimate.tsissm.spec <- function(object, solver = "nloptr", control = NULL, scores = TRUE, debug_mode = FALSE, ...)
 {
     estimate <- NULL
     tic <- Sys.time()
@@ -698,7 +698,7 @@ tmb_inputs_issm_constant <- function(spec)
                           lb = spec_list$lower, ub = spec_list$upper, opts = control, fun = fun, issmenv = issmenv) 
         }
         pars <- sol$solution
-    } else {
+    } else if (solver == "solnp") {
         cfun <- make_constraint_solnp(object, fun, issmenv)
         sol <- csolnp(pars = fun$par, fn = spec_list$llh_fun, gr = spec_list$grad_fun, ineq_fn = cfun$ineq_fn,
                       ineq_jac = cfun$ineq_jac, ineq_lower = cfun$ineq_lower, ineq_upper = cfun$ineq_upper, 
@@ -706,6 +706,7 @@ tmb_inputs_issm_constant <- function(spec)
         sol$status <- sol$convergence
         pars <- sol$pars
     }
+    
     spec_list$data$xseed <- as.numeric(fun$env$data$xseed)
     if (return_scores) {
         scores <- score_function(pars, spec_list)
@@ -780,7 +781,6 @@ tmb_inputs_issm_constant <- function(spec)
     if (case_id[2] > 0) {
         issmenv$constraint <- issm_constraint(fun$par, fun, issmenv)
     }
-    
     if (solver == "nloptr") {
         cfun <- make_constraint(object, fun, issmenv)
         if (is.null(control)) {
@@ -799,7 +799,7 @@ tmb_inputs_issm_constant <- function(spec)
         }
         spec_list$data$xseed <- as.numeric(fun$env$data$xseed)
         pars <- sol$solution
-    } else {
+    } else if (solver == "solnp") {
         cfun <- make_constraint_solnp(object, fun, issmenv)
         sol <- csolnp(pars = fun$par, fn = spec_list$llh_fun, gr = spec_list$grad_fun, ineq_fn = cfun$ineq_fn,
                       ineq_jac = cfun$ineq_jac, ineq_lower = cfun$ineq_lower, ineq_upper = cfun$ineq_upper, 
