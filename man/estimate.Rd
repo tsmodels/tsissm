@@ -55,10 +55,10 @@ When calculating the scores, a future promise is created so it is fastest if
 a future plan is pre-created with at least 2 workers so that the function can 
 run in the background without having to wait for the estimation object to be
 returned.\cr
-If the control argument is NULL, then we hybrid strategy is adopted whereby
-the SLSQP algorithm is initially used and if it fails (status less than 0) 
-then the Augmented Lagrange with MMA local solver is used which is slower but
-may be more reliable.\cr
+If the control argument is NULL, then a hybrid strategy is adopted whereby
+the SLSQP algorithm is initially used and if it fails (status less than 0 or errors
+due to NaNs in sampled parameters) then the Augmented Lagrange with MMA local 
+solver is used which is slower but may be more reliable.\cr
 For the automatic selection estimation, this will benefit from the use of multiple
 processes which can be set up with a \code{\link[future]{plan}}. For progress
 tracing, use \code{\link[progressr]{handlers}}. The function will check for

@@ -17,10 +17,10 @@
 #' a future plan is pre-created with at least 2 workers so that the function can 
 #' run in the background without having to wait for the estimation object to be
 #' returned.\cr
-#' If the control argument is NULL, then we hybrid strategy is adopted whereby
-#' the SLSQP algorithm is initially used and if it fails (status less than 0) 
-#' then the Augmented Lagrange with MMA local solver is used which is slower but
-#' may be more reliable.\cr
+#' If the control argument is NULL, then a hybrid strategy is adopted whereby
+#' the SLSQP algorithm is initially used and if it fails (status less than 0 or errors
+#' due to NaNs in sampled parameters) then the Augmented Lagrange with MMA local 
+#' solver is used which is slower but may be more reliable.\cr
 #' For the automatic selection estimation, this will benefit from the use of multiple
 #' processes which can be set up with a \code{\link[future]{plan}}. For progress
 #' tracing, use \code{\link[progressr]{handlers}}. The function will check for
@@ -683,9 +683,13 @@ tmb_inputs_issm_constant <- function(spec)
         cfun <- make_constraint(object, fun, issmenv)
         if (is.null(control)) {
             control <- issm_control(solver = "nloptr", algorithm = "SLSQP", trace = 0)
-            sol <- nloptr(x0 = fun$par, eval_f = spec_list$llh_fun, eval_grad_f = spec_list$grad_fun, eval_g_ineq = cfun,
-                          lb = spec_list$lower, ub = spec_list$upper, opts = control, fun = fun, issmenv = issmenv)
-            if (sol$status < 0) {
+            sol <- try(nloptr(x0 = fun$par, eval_f = spec_list$llh_fun, eval_grad_f = spec_list$grad_fun, eval_g_ineq = cfun,
+                          lb = spec_list$lower, ub = spec_list$upper, opts = control, fun = fun, issmenv = issmenv), silent = TRUE)
+            if (inherits(sol,'try-error')) {
+                control <- issm_control(solver = "nloptr", algorithm = "AUGLAG/MMA", trace = 0)
+                sol <- nloptr(x0 = fun$par, eval_f = spec_list$llh_fun, eval_grad_f = spec_list$grad_fun, eval_g_ineq = cfun,
+                              lb = spec_list$lower, ub = spec_list$upper, opts = control, fun = fun, issmenv = issmenv)
+            } else if (sol$status < 0) {
                 control <- issm_control(solver = "nloptr", algorithm = "AUGLAG/CCSAQ", trace = 0)
                 par_iter <- sol$solution
                 sol <- nloptr(x0 = par_iter, eval_f = spec_list$llh_fun, eval_grad_f = spec_list$grad_fun, eval_g_ineq = cfun,
@@ -776,9 +780,13 @@ tmb_inputs_issm_constant <- function(spec)
         cfun <- make_constraint(object, fun, issmenv)
         if (is.null(control)) {
             control <- issm_control(solver = "nloptr", algorithm = "SLSQP", trace = 0)
-            sol <- nloptr(x0 = fun$par, eval_f = spec_list$llh_fun, eval_grad_f = spec_list$grad_fun, eval_g_ineq = cfun,
-                          lb = spec_list$lower, ub = spec_list$upper, opts = control, fun = fun, issmenv = issmenv)
-            if (sol$status < 0) {
+            sol <- try(nloptr(x0 = fun$par, eval_f = spec_list$llh_fun, eval_grad_f = spec_list$grad_fun, eval_g_ineq = cfun,
+                          lb = spec_list$lower, ub = spec_list$upper, opts = control, fun = fun, issmenv = issmenv), silent = TRUE)
+            if (inherits(sol, 'try-error')) {
+                control <- issm_control(solver = "nloptr", algorithm = "AUGLAG/MMA", trace = 0)
+                sol <- try(nloptr(x0 = fun$par, eval_f = spec_list$llh_fun, eval_grad_f = spec_list$grad_fun, eval_g_ineq = cfun,
+                                  lb = spec_list$lower, ub = spec_list$upper, opts = control, fun = fun, issmenv = issmenv), silent = TRUE)
+            } else if (sol$status < 0) {
                 control <- issm_control(solver = "nloptr", algorithm = "AUGLAG/CCSAQ", trace = 0)
                 par_iter <- sol$solution
                 sol <- nloptr(x0 = par_iter, eval_f = spec_list$llh_fun, eval_grad_f = spec_list$grad_fun, eval_g_ineq = cfun,
