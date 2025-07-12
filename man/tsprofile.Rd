@@ -11,6 +11,7 @@
   nsim = 100,
   seed = NULL,
   solver = "nloptr",
+  control = NULL,
   trace = FALSE,
   ...
 )
@@ -25,11 +26,13 @@
 \item{seed}{an object specifying if and how the random number generator
 should be initialized. See the simulate documentation for more details.}
 
-\item{solver}{either \dQuote{nlortr} or \dQuote{solnp}.}
+\item{solver}{only \dQuote{nlortr} currently available.}
 
-\item{trace}{whether to show the progress bar and additionally output verbose messages. 
+\item{control}{optional control parameters.
 The user is expected to have set up appropriate handlers for this using 
 the \code{\link[progressr]{handlers}} function from the \dQuote{progressr} package.}
+
+\item{trace}{whether to show the progress bar and additionally output verbose messages.}
 
 \item{...}{not currently used.}
 }

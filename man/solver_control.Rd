@@ -10,15 +10,11 @@ issm_control(
   trace = 0,
   xtol_rel = 1e-14,
   maxeval = 1000,
-  xtol_abs = 1e-12,
-  rho = 1,
-  max_iter = 400,
-  min_iter = 800,
-  tol = 1e-08
+  xtol_abs = 1e-12
 )
 }
 \arguments{
-\item{solver}{choice of \sQuote{nloptr} and \sQuote{solnp}}
+\item{solver}{only \sQuote{nloptr} at present}
 
 \item{algorithm}{(nloptr) the algorithm to use}
 
@@ -29,24 +25,14 @@ issm_control(
 \item{maxeval}{(nloptr) number of function evaluations to stop on}
 
 \item{xtol_abs}{(nloptr) absolute tolerances on optimization parameters}
-
-\item{rho}{(solnp) onitial penalty parameter for the augmented Lagrangian}
-
-\item{max_iter}{(solnp) maximum number of major (outer) iterations}
-
-\item{min_iter}{(solnp) maximum number of minor (inner) iterations per outer iteration}
-
-\item{tol}{(solnp) convergence tolerance}
 }
 \value{
-a list with the options which is then passed to the appropriate solver.
+a list with the options which is then passed to the solver.
 }
 \description{
 ISSM solver control parameters
 }
 \details{
-The function provides defaults for use when using either the \code{\link{nloptr}[nloptr]}
-or \code{\link{csolnp}[Rsolnp]}. For the 
-former, additional control parameters may be appended to the list if the user so wishes 
-(\sQuote{nloptr} has many more options).
+The function provides defaults for use, but additional control parameters may 
+be appended to the list if the user so wishes (\sQuote{nloptr} has many more options).
 }

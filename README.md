@@ -2,7 +2,7 @@
 # tsissm <img src="man/figures/logo.png" align="right" height="139" alt="" />
 
 [![R-CMD-check](https://github.com/tsmodels/tsissm/actions/workflows/rcmdcheck.yaml/badge.svg)](https://github.com/tsmodels/tsissm/actions/workflows/rcmdcheck.yaml)
-[![Last-changedate](https://img.shields.io/badge/last%20change-2025--07--05-yellowgreen.svg)](/commits/master)
+[![Last-changedate](https://img.shields.io/badge/last%20change-2025--07--12-yellowgreen.svg)](/commits/master)
 [![packageversion](https://img.shields.io/badge/Package%20version-1.0.2-orange.svg?style=flat-square)](commits/master)
 [![CRAN_Status_Badge](https://www.r-pkg.org/badges/version/tsissm)](https://cran.r-project.org/package=tsissm)
 

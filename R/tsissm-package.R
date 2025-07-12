@@ -12,7 +12,6 @@
 #' @importFrom zoo index as.zoo zoo coredata na.locf na.fill is.zoo
 #' @importFrom sandwich estfun bwNeweyWest vcovHAC vcovOPG bread
 #' @importFrom nloptr nloptr
-#' @importFrom Rsolnp csolnp
 #' @importFrom xts xts as.xts is.xts
 #' @importFrom flextable flextable as_flextable set_caption italic fontsize separate_header add_footer_row add_footer_lines append_chunks as_chunk as_equation as_paragraph compose colformat_double set_header_labels padding bold align autofit hline width
 #' @importFrom future.apply future_lapply

@@ -7,7 +7,7 @@ Maintainer: Alexios Galanos <alexios@4dscape.com>
 Description: Unobserved components time series model using the linear innovations state space representation (single source of error) with choice of error distributions and option for dynamic variance. Methods for estimation using automatic differentiation, automatic model selection and ensembling, prediction, filtering, simulation and backtesting. Based on the model described in Hyndman et al (2012) <doi:10.1198/jasa.2011.tm09771>.
 Depends: R (>= 4.1.0), Rcpp (>= 0.12.9), tsmethods (>= 1.0.0)
 LinkingTo: Rcpp (>= 0.12.9), TMB, RcppEigen
-Imports: TMB (>= 1.7.20), methods, tsaux, tsdistributions, zoo, xts, copula, flextable, data.table, sandwich, nloptr, Rsolnp, RTMB, viridisLite, future, future.apply, progressr
+Imports: TMB (>= 1.7.20), methods, tsaux, tsdistributions, zoo, xts, copula, flextable, data.table, sandwich, nloptr, RTMB, viridisLite, future, future.apply, progressr
 Suggests: 
     rmarkdown,
     tstests,

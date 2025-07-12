@@ -20,7 +20,7 @@
 \arguments{
 \item{object}{an object of class \dQuote{tsissm.spec} or \dQuote{tsissm.autospec}.}
 
-\item{solver}{a choice or either \code{nloptr} or \code{solnp}.}
+\item{solver}{only \code{nloptr} currently supported.}
 
 \item{control}{solver control parameters (see \code{\link{issm_control}}).}
 

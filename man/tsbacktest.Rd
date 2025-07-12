@@ -17,6 +17,7 @@
   weights = NULL,
   seed = NULL,
   solver = "nloptr",
+  control = NULL,
   trace = FALSE,
   ...
 )
@@ -30,6 +31,7 @@
   rolling = FALSE,
   seed = NULL,
   solver = "nloptr",
+  control = NULL,
   trace = FALSE,
   ...
 )
@@ -63,7 +65,9 @@ from the filtered data (TRUE).}
 be initialized (\sQuote{seeded}). Either NULL or an integer that will be used in a 
 call to set.seed before simulating the response vectors.}
 
-\item{solver}{either \dQuote{nlortr} or \dQuote{solnp}.}
+\item{solver}{only \dQuote{nlortr} currently supported.}
+
+\item{control}{optional control parameters.}
 
 \item{trace}{whether to show the progress bar. The user is expected to have
 set up appropriate handlers for this using the \dQuote{progressr} package.}

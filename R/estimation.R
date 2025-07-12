@@ -3,7 +3,7 @@
 #' @description Estimates a model given a specification object using
 #' maximum likelihood.
 #' @param object an object of class \dQuote{tsissm.spec} or \dQuote{tsissm.autospec}.
-#' @param solver a choice or either \code{nloptr} or \code{solnp}.
+#' @param solver only \code{nloptr} currently supported.
 #' @param control solver control parameters (see \code{\link{issm_control}}).
 #' @param scores whether to calculate the analytic scores (Jacobian) of the
 #' likelihood. This is not available for the \dQuote{tsissm.autospec} object.
@@ -90,13 +90,11 @@ estimate.tsissm.autospec <- function(object, solver = "nloptr", control = NULL, 
         if (solver == "nloptr") {
             control <- issm_control(solver = "nloptr", algorithm = "SLSQP", trace = 0) 
         } else {
-            control <- issm_control(solver = "solnp", trace = 0) 
+            stop("\nonly nloptr supported")
         }
     } else {
         if (solver == "nloptr") {
             control$print_level <- 0
-        } else {
-            control$trace <- 0
         }
     }
     distribution <- object$distribution
@@ -698,13 +696,6 @@ tmb_inputs_issm_constant <- function(spec)
                           lb = spec_list$lower, ub = spec_list$upper, opts = control, fun = fun, issmenv = issmenv) 
         }
         pars <- sol$solution
-    } else if (solver == "solnp") {
-        cfun <- make_constraint_solnp(object, fun, issmenv)
-        sol <- csolnp(pars = fun$par, fn = spec_list$llh_fun, gr = spec_list$grad_fun, ineq_fn = cfun$ineq_fn,
-                      ineq_jac = cfun$ineq_jac, ineq_lower = cfun$ineq_lower, ineq_upper = cfun$ineq_upper, 
-                      lower = spec_list$lower, upper = spec_list$upper, control = control, fun = fun, issmenv = issmenv)
-        sol$status <- sol$convergence
-        pars <- sol$pars
     }
     
     spec_list$data$xseed <- as.numeric(fun$env$data$xseed)
@@ -799,13 +790,6 @@ tmb_inputs_issm_constant <- function(spec)
         }
         spec_list$data$xseed <- as.numeric(fun$env$data$xseed)
         pars <- sol$solution
-    } else if (solver == "solnp") {
-        cfun <- make_constraint_solnp(object, fun, issmenv)
-        sol <- csolnp(pars = fun$par, fn = spec_list$llh_fun, gr = spec_list$grad_fun, ineq_fn = cfun$ineq_fn,
-                      ineq_jac = cfun$ineq_jac, ineq_lower = cfun$ineq_lower, ineq_upper = cfun$ineq_upper, 
-                      lower = spec_list$lower, upper = spec_list$upper, control = control, fun = fun, issmenv = issmenv)
-        sol$status <- sol$convergence
-        pars <- sol$pars
     }
     
     if (return_scores) {
