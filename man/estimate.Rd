@@ -48,7 +48,14 @@ maximum likelihood.
 }
 \details{
 The maximum likelihood estimation for this model is described in the 
-vignette.
+vignette. For platforms where RTMB's automatic differentiation support for
+non-symmetric eigen decompositions is unavailable, estimation automatically
+falls back to numeric eigenvalue constraints with finite-difference constraint
+Jacobians while retaining automatic differentiation for the likelihood. This
+behavior can be controlled with the \code{tsissm.rtmb_ad_eigen} option:
+\code{TRUE} forces RTMB AD eigen constraints, \code{FALSE} forces the
+finite-difference fallback, and \code{NULL} (the default) performs a cached
+runtime capability check.
 }
 \note{
 When calculating the scores, a future promise is created so it is fastest if

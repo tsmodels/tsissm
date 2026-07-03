@@ -1,5 +1,97 @@
+rtmb_ad_eigen_available <- local({
+    cache <- NULL
+    function(force = FALSE) {
+        opt <- getOption("tsissm.rtmb_ad_eigen", NULL)
+        if (!is.null(opt)) return(isTRUE(opt))
+        if (!force && !is.null(cache)) return(cache)
+        cache <<- isTRUE(tryCatch({
+            f <- function(pars) {
+                x <- pars[1:2]
+                A <- matrix(c(x[1], -x[2], x[2], x[1]), 2, 2)
+                ev <- eigen(A, symmetric = FALSE, only.values = TRUE)$values
+                sum(Mod(ev))
+            }
+            obj <- makeADFun2(func = f, parameters = c(0.8, 0.2), silent = TRUE)
+            val <- obj$fn(obj$par)
+            gr <- obj$gr(obj$par)
+            is.finite(val) && all(is.finite(gr))
+        }, error = function(e) FALSE))
+        cache
+    }
+})
+
+fd_jacobian <- function(fn, pars, ..., eps = sqrt(.Machine$double.eps)) {
+    f0 <- fn(pars, ...)
+    J <- matrix(0, nrow = length(f0), ncol = length(pars))
+    for (i in seq_along(pars)) {
+        h <- eps * max(1, abs(pars[i]))
+        xp <- xm <- pars
+        xp[i] <- xp[i] + h
+        xm[i] <- xm[i] - h
+        J[, i] <- (fn(xp, ...) - fn(xm, ...))/(2 * h)
+    }
+    J
+}
+
+numeric_companion_eigen_constraint <- function(pars, index, sign = 1) {
+    pars <- sign * pars[index]
+    n <- length(pars)
+    if (n > 1) {
+        first_row <- c(-rev(pars[-n]) / pars[n], 1 / pars[n])
+    } else {
+        first_row <- 1 / pars[n]
+    }
+    C <- base::matrix(0, n, n)
+    C[1, ] <- first_row
+    if (n > 1) {
+        C[cbind(2:n, 1:(n - 1))] <- 1
+    }
+    proots <- base::eigen(C, symmetric = FALSE, only.values = TRUE)$values
+    1.0 - Mod(proots)
+}
+
+numeric_issm_eigen_constraint <- function(pars, fun, eigenvalues = FALSE) {
+    allpars <- fun$env$data$allpars
+    ppindex <- fun$env$data$ppindex + 1
+    findex <- fun$env$data$findex + 1
+    fpindex <- fun$env$data$fpindex + 1
+    V <- fun$env$data$V
+    fshape <- fun$env$data$fshape
+    fshape[1] <- fshape[1] + 1
+    fshape[3] <- fshape[3] + 1
+    fshape[5] <- fshape[5] + 1
+    fshape[7] <- fshape[7] + 1
+    fshape[9] <- fshape[9] + 1
+    modeli <- fun$env$data$modeli
+    n <- length(ppindex)
+    for (i in 1:n) allpars[ppindex[i]] <- pars[i]
+    m <- length(findex)
+    for (i in 1:m) V[findex[i]] <- allpars[fpindex[i]]
+    F0tmp <- V[fshape[1]:(fshape[1] + fshape[2] - 1)]
+    F0 <- base::matrix(F0tmp, modeli[1], modeli[1])
+    F1tmp <- V[fshape[3]:(fshape[3] + fshape[4] - 1)]
+    F1 <- base::matrix(F1tmp, modeli[1], modeli[1])
+    F2tmp <- V[fshape[5]:(fshape[5] + fshape[6] - 1)]
+    F2 <- base::matrix(F2tmp, modeli[1], modeli[1])
+    F <- base::matrix(as.vector(F0) * as.vector(F1) * as.vector(F2), modeli[1], modeli[1])
+    W <- V[fshape[7]:(fshape[7] + fshape[8] - 1)]
+    G <- V[fshape[9]:(fshape[9] + fshape[10] - 1)]
+    M <- t(base::matrix(W, modeli[1], 1))
+    B <- base::matrix(G, modeli[1], 1) %*% M
+    D <- base::matrix(as.vector(F) - as.vector(B), modeli[1], modeli[1])
+    D <- base::as.matrix(D[1:modeli[4], 1:modeli[4]])
+    tmp <- Mod(base::eigen(D, symmetric = FALSE, only.values = TRUE)$values)
+    if (eigenvalues) return(tmp)
+    tmp - 1.01
+}
+
 ar_jconstraint <- function(pars, fun, issmenv)
 {
+    if (!rtmb_ad_eigen_available()) {
+        fn <- function(pars) numeric_companion_eigen_constraint(pars, issmenv$arindex, sign = 1)
+        gr <- function(pars) fd_jacobian(fn, pars)
+        return(list(fn = fn, gr = gr))
+    }
     arconstraint <- function(parms) {
         # Overload assignment for AD-aware indexing
         "[<-" <- ADoverload("[<-")
@@ -45,6 +137,11 @@ ar_jconstraint <- function(pars, fun, issmenv)
 
 ma_jconstraint <- function(pars, fun, issmenv)
 {
+    if (!rtmb_ad_eigen_available()) {
+        fn <- function(pars) numeric_companion_eigen_constraint(pars, issmenv$maindex, sign = -1)
+        gr <- function(pars) fd_jacobian(fn, pars)
+        return(list(fn = fn, gr = gr))
+    }
     maconstraint <- function(parms) {
         # Overload assignment for AD-aware indexing
         "[<-" <- ADoverload("[<-")
@@ -114,6 +211,12 @@ garch_jacobian <- function(pars, fun, issmenv) {
 
 issm_constraint <- function(pars, fun, issmenv)
 {
+    if (!rtmb_ad_eigen_available()) {
+        fn <- function(pars) numeric_issm_eigen_constraint(pars, fun)
+        gr <- function(pars) fd_jacobian(fn, pars)
+        report <- function(pars) list(tmp = numeric_issm_eigen_constraint(pars, fun, eigenvalues = TRUE))
+        return(list(fn = fn, gr = gr, report = report))
+    }
     allpars <- fun$env$data$allpars
     ppindex <- fun$env$data$ppindex + 1
     findex <- fun$env$data$findex + 1

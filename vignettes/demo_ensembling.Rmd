@@ -88,7 +88,7 @@ mod <- spec |> estimate()
 We first inspect the top selected model:
 
 ```{r}
-mod$models[[1]] |> summary() |> as_flextable()
+summary(mod$models[[1]])
 ```
 
 This model uses 5 harmonics and an ARMA(2,1) structure. Most coefficients appear 
