@@ -64,7 +64,7 @@ namespace issmextra {
             xaux.row(i) = (gtmp + G * eaux(i));
             waux.row(i) = waux.row(i - 1) * D;
         }
-        matrix<Type> B = waux(valid_index, Eigen::all);
+        matrix<Type> B = waux(valid_index, Eigen::indexing::all);
         matrix<Type> A = B.leftCols(modeli(3));
         vector<Type> E = eaux(valid_index);
         matrix<Type> xseed = A.householderQr().solve(E.matrix());
