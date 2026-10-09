@@ -32,3 +32,14 @@ issm_control <- function(solver = "nloptr", algorithm = c("SLSQP","AUGLAG/MMA","
         return(ctrl)
     }
 }
+
+# unified solver status: 0 = converged, 1 = stopped at an iteration/evaluation
+# limit with a solution returned (not certified), -1 = failure.
+# nloptr: status 1-4 (success codes) -> 0, 5-6 (maxeval/maxtime reached) -> 1, <0 -> -1
+solver_status <- function(sol, solver = "nloptr")
+{
+    s <- sol$status
+    if (s >= 1 && s <= 4) return(0L)
+    if (s == 5 || s == 6) return(1L)
+    return(-1L)
+}

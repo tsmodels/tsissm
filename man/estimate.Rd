@@ -40,7 +40,13 @@ In the case of automatic model selection an object of class \dQuote{tsissm.estim
 will be returned based on AIC (minimum) if \dQuote{top_n} is 1, else an object of
 class \dQuote{tsissm.selection} with a list of length \dQuote{top_n}. This object
 can then be used for filtering, prediction and simulation and then ensembled 
-(based on user specified weights).
+(based on user specified weights).\cr
+The \dQuote{tsissm.estimate} object contains a unified solver convergence code in
+\code{status}: 0 = converged, 1 = the solver stopped at an iteration/evaluation
+limit and returned a solution which is not certified as converged, -1 = failure.
+The solver used is recorded in \code{solver}, and \code{solver_diagnostics}
+contains a list with the native \dQuote{nloptr} \code{status}, \code{message},
+\code{iterations}, \code{objective} and \code{solution}.
 }
 \description{
 Estimates a model given a specification object using

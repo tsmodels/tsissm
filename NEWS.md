@@ -1,3 +1,17 @@
+# tsissm 1.0.4
+
+* The `status` slot of a `tsissm.estimate` object now holds a unified solver
+convergence code: 0 = converged, 1 = the solver stopped at an
+iteration/evaluation limit and returned a solution which is not certified as
+converged, -1 = failure. It previously held the raw `nloptr` status code. The
+raw solver output is now available in `solver_diagnostics`, and the solver used
+is recorded in the new `solver` field.
+* `tsbacktest` now uses `future.seed = TRUE`, so parallel simulation uses proper
+L'Ecuyer RNG streams and results are reproducible across future plans. Results
+for a given seed may differ from earlier versions.
+* Switched `Eigen::all` to `Eigen::indexing::all` for compatibility with
+Eigen 5.0 / the upcoming RcppEigen (contributed by Dirk Eddelbuettel).
+
 # tsissm 1.0.3
 
 * Work around RTMB AD eigen failures on M1 macOS. CRAN M1MAC/R-devel checks fail 

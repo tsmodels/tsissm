@@ -38,7 +38,13 @@
 #' will be returned based on AIC (minimum) if \dQuote{top_n} is 1, else an object of
 #' class \dQuote{tsissm.selection} with a list of length \dQuote{top_n}. This object
 #' can then be used for filtering, prediction and simulation and then ensembled 
-#' (based on user specified weights).
+#' (based on user specified weights).\cr
+#' The \dQuote{tsissm.estimate} object contains a unified solver convergence code in
+#' \code{status}: 0 = converged, 1 = the solver stopped at an iteration/evaluation
+#' limit and returned a solution which is not certified as converged, -1 = failure.
+#' The solver used is recorded in \code{solver}, and \code{solver_diagnostics}
+#' contains a list with the native \dQuote{nloptr} \code{status}, \code{message},
+#' \code{iterations}, \code{objective} and \code{solution}.
 #' @aliases estimate
 #' @method estimate tsissm.spec
 #' @rdname estimate
@@ -74,7 +80,9 @@ estimate.tsissm.spec <- function(object, solver = "nloptr", control = NULL, scor
         f$tmb <- opt$tmb
         f$opt <- opt$solver_out
     }
-    f$status <- opt$solver_out$status
+    f$status <- opt$status
+    f$solver <- opt$solver
+    f$solver_diagnostics <- opt$solver_diagnostics
     f$score_promise <- opt$scores
     f$elapsed <- difftime(Sys.time(), tic, units = "mins")
     f$hessian <- opt$hessian
@@ -726,7 +734,11 @@ tmb_inputs_issm_constant <- function(spec)
     colnames(hessian) <- rownames(hessian) <- issmenv$estimation_names
     xseed <- fun$report()$states[1,,drop = FALSE]
     D <- abs(eigen(fun$report(pars)$D, only.values = TRUE, symmetric = FALSE)$values)
-    out <- list(pars = pars, llh = llh, gradient = gradient, hessian = hessian, scores = scores, xseed = xseed, solver_out = sol, tmb = fun, D = D)
+    # nloptr results capture the eval closures (which hold the TMB object), so
+    # only the informative scalars are kept
+    solver_diagnostics <- sol[c("status","message","iterations","objective","solution")]
+    out <- list(pars = pars, llh = llh, gradient = gradient, hessian = hessian, scores = scores, xseed = xseed, solver = solver, 
+                status = solver_status(sol, solver), solver_diagnostics = solver_diagnostics, solver_out = sol, tmb = fun, D = D)
     return(out)
 }
 
@@ -824,7 +836,11 @@ tmb_inputs_issm_constant <- function(spec)
     colnames(hessian) <- rownames(hessian) <- issmenv$estimation_names
     xseed <- fun$report()$states[1,,drop = FALSE]
     D <- abs(eigen(fun$report(pars)$D, only.values = TRUE, symmetric = FALSE)$values)
-    out <- list(pars = pars, llh = llh, gradient = gradient, hessian = hessian, scores = scores, xseed = xseed, solver_out = sol, tmb = fun, D = D)
+    # nloptr results capture the eval closures (which hold the TMB object), so
+    # only the informative scalars are kept
+    solver_diagnostics <- sol[c("status","message","iterations","objective","solution")]
+    out <- list(pars = pars, llh = llh, gradient = gradient, hessian = hessian, scores = scores, xseed = xseed, solver = solver, 
+                status = solver_status(sol, solver), solver_diagnostics = solver_diagnostics, solver_out = sol, tmb = fun, D = D)
     return(out)
 }
 

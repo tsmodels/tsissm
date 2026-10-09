@@ -36,4 +36,12 @@ test_that("constant variance benchmark (tmb vs eigen filter)", {
     expect_equal(error_tmb, error_filt, tolerance = 1e-8)
 })
 
+test_that("estimate returns unified solver status and diagnostics", {
+    mod <- mod_constant_benchmark
+    expect_identical(mod$status, 0L)
+    expect_identical(mod$solver, "nloptr")
+    expect_true(mod$solver_diagnostics$status %in% 1:4)
+    expect_identical(names(mod$solver_diagnostics), c("status","message","iterations","objective","solution"))
+})
+
     

@@ -241,7 +241,7 @@ tsbacktest.tsissm.spec <- function(object, start = floor(length(object$target$y_
                               "actual" = as.numeric(y_test))
         }
         return(out)
-    }, future.packages = c("tsmethods","tsissm","xts","data.table"), future.stdout	= FALSE, future.seed = FALSE)
+    }, future.packages = c("tsmethods","tsissm","xts","data.table"), future.stdout	= FALSE, future.seed = TRUE)
     b <- eval(b)
     b <- rbindlist(b)
     out <- list(table = b, h = h, estimate_every = estimate_every, rolling = rolling, type = "simple")
