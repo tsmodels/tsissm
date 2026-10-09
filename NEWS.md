@@ -10,7 +10,7 @@ is recorded in the new `solver` field.
 L'Ecuyer RNG streams and results are reproducible across future plans. Results
 for a given seed may differ from earlier versions.
 * Switched `Eigen::all` to `Eigen::indexing::all` for compatibility with
-Eigen 5.0 / the upcoming RcppEigen (contributed by Dirk Eddelbuettel).
+Eigen 5.0 / the upcoming RcppEigen (contributed by Dirk Eddelbuettel PR # 2).
 
 # tsissm 1.0.3
 
